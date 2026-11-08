@@ -1,3 +1,5 @@
+> Historical Compose auth-harness documentation. For the current Nagram/MAX client see [nagram-migration.md](nagram-migration.md) and [screen-map.md](screen-map.md). Paths named `app` below refer to the renamed `tools-auth-harness`.
+
 # Локализация
 
 Семь языковых групп, восемь вариантов. Другие языки не добавляются без отдельного запроса.

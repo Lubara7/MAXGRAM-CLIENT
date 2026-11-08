@@ -33,19 +33,20 @@ jobs:
       - name: Unit tests, lint, both backends and device-test compilation
         run: >-
           ./gradlew --no-daemon
+          :max-backend:test :max-backend:writeAdapterClasspath
           :core:domain:test
           :core:data:testDemoDebugUnitTest
           :core:data:testProductionDebugUnitTest
           :core:localization:testDebugUnitTest
           :feature:auth:testDebugUnitTest
-          :app:lintDemoDebug :app:lintProductionDebug
-          :app:assembleDemoDebug :app:assembleProductionDebug
+          :auth-harness:lintDemoDebug :auth-harness:lintProductionDebug
+          :auth-harness:assembleDemoDebug :auth-harness:assembleProductionDebug
           :core:data:assembleDemoDebugAndroidTest
-      - name: Upload debug APKs
-        uses: actions/upload-artifact@v6
-        with:
-          name: tgmax-debug-apks
-          path: app/build/outputs/apk/**/debug/*.apk
+      - name: Check pinned Nagram integration
+        run: |
+          git submodule update --init --depth 1 upstream/nagramxf
+          python3 scripts/check_nagram_api.py
+          python3 scripts/prepare_nagram_client.py
       - name: Upload test and lint reports
         if: always()
         uses: actions/upload-artifact@v6
@@ -53,4 +54,4 @@ jobs:
           name: verification-reports
           path: |
             **/build/reports/tests/
-            app/build/reports/lint-results-*.html
+            tools-auth-harness/build/reports/lint-results-*.html

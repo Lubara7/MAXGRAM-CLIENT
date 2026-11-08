@@ -1,3 +1,5 @@
+> Historical Compose auth-harness documentation. For the current Nagram/MAX client see [nagram-migration.md](nagram-migration.md) and [screen-map.md](screen-map.md). Paths named `app` below refer to the renamed `tools-auth-harness`.
+
 # Архитектура
 
 Целевая платформа — Android, API 26+. Kotlin, Compose и одна AppCompatActivity. AppCompatActivity нужна для совместимой смены языка на Android 12 и более ранних версиях. UI ориентируется на привычные паттерны Telegram/Nagram X; чужой исходный код не переносится.

@@ -9,7 +9,7 @@ android {
     namespace = "io.github.lubara7.tgmax"
     compileSdk = 36
     defaultConfig {
-        applicationId = "io.github.lubara7.tgmax"
+        applicationId = "io.github.lubara7.tgmax.authharness"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

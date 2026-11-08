@@ -1,0 +1,8 @@
+[submodule "upstream/nagramxf"]
+	path = upstream/nagramxf
+	url = https://github.com/Keeperorowner/NagramXF.git
+	shallow = true
+[submodule "upstream/komet"]
+	path = upstream/komet
+	url = https://github.com/KometTeam/Komet.git
+	shallow = true
