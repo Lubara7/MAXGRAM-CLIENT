@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language_title">Idioma</string>
+    <string name="language_system">Usar idioma do sistema</string>
+    <string name="action_back">Voltar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_continue">Continuar</string>
+    <string name="action_sign_in">Entrar</string>
+    <string name="action_sign_out">Sair</string>
+    <string name="action_resend">Reenviar código</string>
+    <string name="action_edit_phone">Alterar número</string>
+    <string name="phone_title">Seu número de telefone</string>
+    <string name="phone_description">Escolha seu país e digite seu número de telefone para entrar no MAX.</string>
+    <string name="phone_label">Número de telefone</string>
+    <string name="country_title">País</string>
+    <string name="country_search">Buscar país</string>
+    <string name="code_title">Digite o código</string>
+    <string name="code_description">Digite o código de confirmação para %1$s.</string>
+    <string name="code_label">Código de confirmação</string>
+    <string name="demo_badge">DEMONSTRAÇÃO</string>
+    <string name="demo_hint">Nenhuma mensagem é enviada. Use o código de teste %1$s.</string>
+    <string name="home_title">Você entrou</string>
+    <string name="home_description">A estrutura de autenticação está pronta. As conversas serão adicionadas em uma próxima etapa.</string>
+    <string name="error_invalid_phone">Digite um número de telefone válido.</string>
+    <string name="error_invalid_code">O código está incorreto. Tente novamente.</string>
+    <string name="error_expired_code">O código expirou. Solicite um novo.</string>
+    <string name="error_rate_limited">Muitas tentativas. Aguarde antes de tentar novamente.</string>
+    <string name="error_network">Verifique sua conexão e tente novamente.</string>
+    <string name="error_integration_unavailable">A conexão com o MAX ainda não está configurada. A entrada real ficará disponível após conectar a Open Client API.</string>
+    <string name="error_session_expired">Sua sessão expirou. Entre novamente.</string>
+    <string name="error_storage">Não foi possível acessar a sessão salva. Entre novamente.</string>
+    <string name="error_unsupported_challenge">Esta etapa de verificação ainda não é compatível.</string>
+    <string name="error_unknown">Ocorreu um erro. Tente novamente.</string>
+    <plurals name="resend_countdown">
+        <item quantity="one">Tente novamente em %1$d segundo</item>
+        <item quantity="other">Tente novamente em %1$d segundos</item>
+    </plurals>
+</resources>

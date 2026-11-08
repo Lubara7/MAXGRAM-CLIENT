@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language_title">Til</string>
+    <string name="language_system">Tizim tilidan foydalanish</string>
+    <string name="action_back">Orqaga</string>
+    <string name="action_cancel">Bekor qilish</string>
+    <string name="action_continue">Davom etish</string>
+    <string name="action_sign_in">Kirish</string>
+    <string name="action_sign_out">Chiqish</string>
+    <string name="action_resend">Kodni qayta yuborish</string>
+    <string name="action_edit_phone">Raqamni o‘zgartirish</string>
+    <string name="phone_title">Telefon raqamingiz</string>
+    <string name="phone_description">MAX hisobiga kirish uchun mamlakatingizni tanlang va telefon raqamingizni kiriting.</string>
+    <string name="phone_label">Telefon raqami</string>
+    <string name="country_title">Mamlakat</string>
+    <string name="country_search">Mamlakatni qidirish</string>
+    <string name="code_title">Kodni kiriting</string>
+    <string name="code_description">%1$s raqami uchun tasdiqlash kodini kiriting.</string>
+    <string name="code_label">Tasdiqlash kodi</string>
+    <string name="demo_badge">NAMOYISH</string>
+    <string name="demo_hint">Xabar yuborilmaydi. Sinov kodi: %1$s.</string>
+    <string name="home_title">Hisobga kirildi</string>
+    <string name="home_description">Kirish tizimining asosi tayyor. Chatlar keyingi bosqichda qo‘shiladi.</string>
+    <string name="error_invalid_phone">To‘g‘ri telefon raqamini kiriting.</string>
+    <string name="error_invalid_code">Kod noto‘g‘ri. Qayta urinib ko‘ring.</string>
+    <string name="error_expired_code">Kodning amal qilish muddati tugadi. Yangi kod so‘rang.</string>
+    <string name="error_rate_limited">Urinishlar juda ko‘p. Qayta urinishdan oldin kuting.</string>
+    <string name="error_network">Ulanishni tekshiring va qayta urinib ko‘ring.</string>
+    <string name="error_integration_unavailable">MAX bilan ulanish hali sozlanmagan. Haqiqiy kirish Open Client API ulangandan so‘ng ishlaydi.</string>
+    <string name="error_session_expired">Seans muddati tugadi. Qayta kiring.</string>
+    <string name="error_storage">Saqlangan seansni o‘qib bo‘lmadi. Qayta kiring.</string>
+    <string name="error_unsupported_challenge">Bu tekshiruv bosqichi hali qo‘llab-quvvatlanmaydi.</string>
+    <string name="error_unknown">Xatolik yuz berdi. Qayta urinib ko‘ring.</string>
+    <plurals name="resend_countdown">
+        <item quantity="one">%1$d soniyadan keyin qayta urining</item>
+        <item quantity="other">%1$d soniyadan keyin qayta urining</item>
+    </plurals>
+</resources>

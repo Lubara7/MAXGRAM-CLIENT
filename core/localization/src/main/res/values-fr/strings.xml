@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language_title">Langue</string>
+    <string name="language_system">Suivre le système</string>
+    <string name="action_back">Retour</string>
+    <string name="action_cancel">Annuler</string>
+    <string name="action_continue">Continuer</string>
+    <string name="action_sign_in">Se connecter</string>
+    <string name="action_sign_out">Se déconnecter</string>
+    <string name="action_resend">Renvoyer le code</string>
+    <string name="action_edit_phone">Modifier le numéro</string>
+    <string name="phone_title">Votre numéro de téléphone</string>
+    <string name="phone_description">Choisissez votre pays et saisissez votre numéro de téléphone pour vous connecter à MAX.</string>
+    <string name="phone_label">Numéro de téléphone</string>
+    <string name="country_title">Pays</string>
+    <string name="country_search">Rechercher un pays</string>
+    <string name="code_title">Saisissez le code</string>
+    <string name="code_description">Saisissez le code de confirmation pour %1$s.</string>
+    <string name="code_label">Code de confirmation</string>
+    <string name="demo_badge">DÉMONSTRATION</string>
+    <string name="demo_hint">Aucun message n’est envoyé. Utilisez le code de test %1$s.</string>
+    <string name="home_title">Connexion réussie</string>
+    <string name="home_description">La base de l’authentification est prête. Les discussions seront ajoutées ultérieurement.</string>
+    <string name="error_invalid_phone">Saisissez un numéro de téléphone valide.</string>
+    <string name="error_invalid_code">Le code est incorrect. Réessayez.</string>
+    <string name="error_expired_code">Ce code a expiré. Demandez-en un nouveau.</string>
+    <string name="error_rate_limited">Trop de tentatives. Patientez avant de réessayer.</string>
+    <string name="error_network">Vérifiez votre connexion et réessayez.</string>
+    <string name="error_integration_unavailable">La connexion à MAX n’est pas encore configurée. La connexion réelle sera disponible après l’intégration d’Open Client API.</string>
+    <string name="error_session_expired">Votre session a expiré. Reconnectez-vous.</string>
+    <string name="error_storage">Impossible de lire la session enregistrée. Reconnectez-vous.</string>
+    <string name="error_unsupported_challenge">Cette étape de vérification n’est pas encore prise en charge.</string>
+    <string name="error_unknown">Une erreur est survenue. Réessayez.</string>
+    <plurals name="resend_countdown">
+        <item quantity="one">Réessayez dans %1$d seconde</item>
+        <item quantity="other">Réessayez dans %1$d secondes</item>
+    </plurals>
+</resources>

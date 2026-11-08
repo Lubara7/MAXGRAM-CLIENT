@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language_title">Мова</string>
+    <string name="language_system">Як у сістэме</string>
+    <string name="action_back">Назад</string>
+    <string name="action_cancel">Адмена</string>
+    <string name="action_continue">Працягнуць</string>
+    <string name="action_sign_in">Увайсці</string>
+    <string name="action_sign_out">Выйсці</string>
+    <string name="action_resend">Адправіць код паўторна</string>
+    <string name="action_edit_phone">Змяніць нумар</string>
+    <string name="phone_title">Ваш нумар тэлефона</string>
+    <string name="phone_description">Выберыце краіну і ўвядзіце нумар тэлефона для ўваходу ў MAX.</string>
+    <string name="phone_label">Нумар тэлефона</string>
+    <string name="country_title">Краіна</string>
+    <string name="country_search">Пошук краіны</string>
+    <string name="code_title">Увядзіце код</string>
+    <string name="code_description">Увядзіце код пацвярджэння для нумара %1$s.</string>
+    <string name="code_label">Код пацвярджэння</string>
+    <string name="demo_badge">ДЭМА</string>
+    <string name="demo_hint">Паведамленне не адпраўляецца. Тэставы код: %1$s.</string>
+    <string name="home_title">Уваход выкананы</string>
+    <string name="home_description">Каркас аўтарызацыі гатовы. Чаты будуць дададзены на наступным этапе.</string>
+    <string name="error_invalid_phone">Увядзіце карэктны нумар тэлефона.</string>
+    <string name="error_invalid_code">Няправільны код. Паспрабуйце яшчэ раз.</string>
+    <string name="error_expired_code">Тэрмін дзеяння кода скончыўся. Запытайце новы.</string>
+    <string name="error_rate_limited">Занадта шмат спроб. Пачакайце перад паўторным запытам.</string>
+    <string name="error_network">Праверце злучэнне і паспрабуйце яшчэ раз.</string>
+    <string name="error_integration_unavailable">Падключэнне да MAX пакуль не наладжана. Сапраўдны ўваход з’явіцца пасля падключэння Open Client API.</string>
+    <string name="error_session_expired">Тэрмін сесіі скончыўся. Увайдзіце зноў.</string>
+    <string name="error_storage">Не ўдалося прачытаць захаваную сесію. Увайдзіце зноў.</string>
+    <string name="error_unsupported_challenge">Гэты этап праверкі пакуль не падтрымліваецца.</string>
+    <string name="error_unknown">Адбылася памылка. Паспрабуйце яшчэ раз.</string>
+    <plurals name="resend_countdown">
+        <item quantity="one">Паўтор праз %1$d секунду</item>
+        <item quantity="few">Паўтор праз %1$d секунды</item>
+        <item quantity="many">Паўтор праз %1$d секунд</item>
+        <item quantity="other">Паўтор праз %1$d секунды</item>
+    </plurals>
+</resources>

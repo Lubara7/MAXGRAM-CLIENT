@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language_title">Язык</string>
+    <string name="language_system">Как в системе</string>
+    <string name="action_back">Назад</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_continue">Продолжить</string>
+    <string name="action_sign_in">Войти</string>
+    <string name="action_sign_out">Выйти</string>
+    <string name="action_resend">Отправить код повторно</string>
+    <string name="action_edit_phone">Изменить номер</string>
+    <string name="phone_title">Ваш номер телефона</string>
+    <string name="phone_description">Выберите страну и введите номер телефона для входа в MAX.</string>
+    <string name="phone_label">Номер телефона</string>
+    <string name="country_title">Страна</string>
+    <string name="country_search">Поиск страны</string>
+    <string name="code_title">Введите код</string>
+    <string name="code_description">Введите код подтверждения для номера %1$s.</string>
+    <string name="code_label">Код подтверждения</string>
+    <string name="demo_badge">ДЕМО</string>
+    <string name="demo_hint">Сообщение не отправляется. Тестовый код: %1$s.</string>
+    <string name="home_title">Вход выполнен</string>
+    <string name="home_description">Каркас авторизации готов. Чаты будут добавлены на следующем этапе.</string>
+    <string name="error_invalid_phone">Введите корректный номер телефона.</string>
+    <string name="error_invalid_code">Неверный код. Попробуйте ещё раз.</string>
+    <string name="error_expired_code">Срок действия кода истёк. Запросите новый.</string>
+    <string name="error_rate_limited">Слишком много попыток. Подождите перед повторным запросом.</string>
+    <string name="error_network">Проверьте соединение и попробуйте ещё раз.</string>
+    <string name="error_integration_unavailable">Подключение к MAX пока не настроено. Реальный вход появится после подключения Open Client API.</string>
+    <string name="error_session_expired">Сессия истекла. Войдите снова.</string>
+    <string name="error_storage">Не удалось прочитать сохранённую сессию. Войдите снова.</string>
+    <string name="error_unsupported_challenge">Этот этап проверки пока не поддерживается.</string>
+    <string name="error_unknown">Произошла ошибка. Попробуйте ещё раз.</string>
+    <plurals name="resend_countdown">
+        <item quantity="one">Повтор через %1$d секунду</item>
+        <item quantity="few">Повтор через %1$d секунды</item>
+        <item quantity="many">Повтор через %1$d секунд</item>
+        <item quantity="other">Повтор через %1$d секунды</item>
+    </plurals>
+</resources>

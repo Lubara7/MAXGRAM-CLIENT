@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">TG-MAX Ultimate</string>
+    <string name="country_calling_code" translatable="false">%1$s (+%2$d)</string>
+    <string name="language_title">Language</string>
+    <string name="language_system">Follow system</string>
+    <string name="action_back">Back</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_sign_in">Sign in</string>
+    <string name="action_sign_out">Sign out</string>
+    <string name="action_resend">Resend code</string>
+    <string name="action_edit_phone">Change phone number</string>
+    <string name="phone_title">Your phone number</string>
+    <string name="phone_description">Choose your country and enter your phone number to sign in to MAX.</string>
+    <string name="phone_label">Phone number</string>
+    <string name="country_title">Country</string>
+    <string name="country_search">Search countries</string>
+    <string name="code_title">Enter the code</string>
+    <string name="code_description">Enter the confirmation code for %1$s.</string>
+    <string name="code_label">Confirmation code</string>
+    <string name="demo_badge">DEMO</string>
+    <string name="demo_hint">No message is sent. Use the test code %1$s.</string>
+    <string name="home_title">You are signed in</string>
+    <string name="home_description">The authentication scaffold is ready. Chats will be added in a later stage.</string>
+    <string name="error_invalid_phone">Enter a valid phone number.</string>
+    <string name="error_invalid_code">The code is incorrect. Try again.</string>
+    <string name="error_expired_code">This code has expired. Request a new one.</string>
+    <string name="error_rate_limited">Too many attempts. Please wait before trying again.</string>
+    <string name="error_network">Check your connection and try again.</string>
+    <string name="error_integration_unavailable">MAX connection is not configured yet. Real sign-in will be available after Open Client API is connected.</string>
+    <string name="error_session_expired">Your session has expired. Please sign in again.</string>
+    <string name="error_storage">Could not access the saved session. Please sign in again.</string>
+    <string name="error_unsupported_challenge">This verification step is not supported yet.</string>
+    <string name="error_unknown">Something went wrong. Please try again.</string>
+    <plurals name="resend_countdown">
+        <item quantity="one">Try again in %1$d second</item>
+        <item quantity="other">Try again in %1$d seconds</item>
+    </plurals>
+</resources>
