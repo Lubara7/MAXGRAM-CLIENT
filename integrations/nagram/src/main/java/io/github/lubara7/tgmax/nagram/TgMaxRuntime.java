@@ -19,6 +19,7 @@ import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.*;
 import org.telegram.tgnet.tl.TL_update;
+import org.telegram.tgnet.tl.TL_account;
 
 public final class TgMaxRuntime {
     private static final Map<Integer, TgMaxRuntime> INSTANCES = new ConcurrentHashMap<>();
@@ -175,6 +176,12 @@ public final class TgMaxRuntime {
     }
 
     private CompletableFuture<TLObject> authenticated(TLObject request) {
+        if (request instanceof TL_account.getAuthorizations) {
+            return api.sessions().thenApply(TgMaxModels::sessions);
+        }
+        if (request instanceof TLRPC.TL_auth_resetAuthorizations) {
+            return api.terminateOtherSessions().thenApply(data -> new TLRPC.TL_boolTrue());
+        }
         if (request instanceof TLRPC.TL_messages_getDialogs) {
             TLRPC.TL_messages_getDialogs r = (TLRPC.TL_messages_getDialogs) request;
             if (r.offset_id != 0) return done(new TLRPC.TL_messages_dialogs());
@@ -311,6 +318,7 @@ public final class TgMaxRuntime {
             TLRPC.TL_auth_authorization auth = new TLRPC.TL_auth_authorization();
             auth.user = models.user(models.self);
             auth.user.phone = authPhone.replace("+", "");
+            if (!auth.user.phone.isEmpty()) auth.user.flags |= 16;
             passwordTrack = null;
             passwordHint = "";
             return finish(auth);

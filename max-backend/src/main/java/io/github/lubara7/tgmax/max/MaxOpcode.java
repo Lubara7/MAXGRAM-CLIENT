@@ -20,6 +20,8 @@ public final class MaxOpcode {
     public static final int TYPING = 65;
     public static final int DELETE = 66;
     public static final int EDIT = 67;
+    public static final int SESSIONS_INFO = 96;
+    public static final int SESSIONS_CLOSE = 97;
     public static final int CHECK_PASSWORD = 115;
     public static final int MESSAGE = 128;
     public static final int CHAT_UPDATE = 135;
