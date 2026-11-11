@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.telegram.tgnet.TLRPC;
+import org.telegram.tgnet.tl.TL_account;
 
 final class TgMaxModels {
     final StableIds ids;
@@ -32,6 +33,24 @@ final class TgMaxModels {
             chats.put(id, chat);
             peer(chat);
         }
+    }
+
+    static TL_account.authorizations sessions(Map<String, Object> data) {
+        if (!(data.get("sessions") instanceof List)) throw new MaxException("MAX_SESSION_LIST_MISSING");
+        TL_account.authorizations result = new TL_account.authorizations();
+        for (Map<String, Object> row : Maps.objects(data.get("sessions"))) {
+            TLRPC.TL_authorization session = new TLRPC.TL_authorization();
+            session.current = Boolean.TRUE.equals(row.get("current"));
+            session.flags = session.current ? 1 : 0;
+            session.hash = Maps.number(row.get("id"), 0);
+            session.app_name = Maps.string(row.get("client"));
+            session.device_model = Maps.string(row.get("info"));
+            session.country = Maps.string(row.get("location"));
+            session.date_active = (int) (Maps.number(row.get("time"), 0) / 1000);
+            session.platform = session.system_version = session.app_version = session.ip = session.region = "";
+            result.authorizations.add(session);
+        }
+        return result;
     }
 
     synchronized TLRPC.User user(long rawId) {

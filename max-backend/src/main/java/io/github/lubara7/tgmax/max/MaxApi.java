@@ -101,6 +101,14 @@ public final class MaxApi {
 
     public CompletableFuture<Map<String, Object>> logout() { return client.request(MaxOpcode.LOGOUT, Maps.of()); }
 
+    public CompletableFuture<Map<String, Object>> sessions() {
+        return client.request(MaxOpcode.SESSIONS_INFO, Maps.of());
+    }
+
+    public CompletableFuture<Map<String, Object>> terminateOtherSessions() {
+        return client.request(MaxOpcode.SESSIONS_CLOSE, Maps.of());
+    }
+
     private byte[] fingerprint() {
         Object seed = client.handshakeData().get("callsSeed");
         if (seed == null) return null;

@@ -122,6 +122,27 @@ public class MaxClientTest {
         assertEquals("synthetic-login-token", Maps.object(Maps.object(result.get("tokenAttrs")).get("LOGIN")).get("token"));
     }
 
+    @Test public void listingSessionsIsReadOnlyAndClosingRequiresSeparateRequest() throws Exception {
+        java.util.List<Integer> requests = new java.util.concurrent.CopyOnWriteArrayList<>();
+        MaxClient client = start(new WebSocketListener() {
+            @Override public void onMessage(WebSocket ws, ByteString bytes) {
+                MaxFrame frame = codec.decode(bytes.toByteArray());
+                if (frame.opcode == MaxOpcode.INIT) {
+                    respond(ws, frame, Maps.of());
+                    return;
+                }
+                requests.add(frame.opcode);
+                assertEquals(Maps.of(), frame.payload);
+                respond(ws, frame, Maps.of("sessions", java.util.Collections.emptyList()));
+            }
+        }, 2_000);
+        MaxApi api = new MaxApi(client);
+        assertTrue(api.sessions().get(4, TimeUnit.SECONDS).containsKey("sessions"));
+        assertEquals(java.util.List.of(96), requests);
+        api.terminateOtherSessions().get(4, TimeUnit.SECONDS);
+        assertEquals(java.util.List.of(96, 97), requests);
+    }
+
     private void respond(WebSocket ws, MaxFrame request, Object payload) {
         ws.send(ByteString.of(codec.encode(new MaxFrame(1, request.sequence, request.opcode, payload))));
     }

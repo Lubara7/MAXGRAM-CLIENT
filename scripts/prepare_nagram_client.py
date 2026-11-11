@@ -114,6 +114,8 @@ def restrict_languages(target):
     sessions = base / "java/org/telegram/ui/SessionsActivity.java"
     change(sessions, "if (currentType == 0 && getMessagesController().qrLoginCamera)",
            f"if (!{JAVA_PREFIX}TgMaxRuntime.enabled() && currentType == 0 && getMessagesController().qrLoginCamera)")
+    change(sessions, "return position == terminateAllSessionsRow || position >= otherSessionsStartRow",
+           f"if ({JAVA_PREFIX}TgMaxRuntime.enabled() && currentType == 0) return position == terminateAllSessionsRow;\n            return position == terminateAllSessionsRow || position >= otherSessionsStartRow")
     login = base / "java/org/telegram/ui/LoginActivity.java"
     add_after_opening(login, r"public void saveSelfArgs\(Bundle outState\)",
                       f"        if ({JAVA_PREFIX}TgMaxRuntime.enabled()) {{ clearCurrentState(); return; }}\n")
@@ -136,12 +138,14 @@ def install_auth_translations(resources):
     names = {"values": "English", "values-ru": "Русский", "values-es": "Español",
              "values-uz": "O‘zbekcha", "values-pt": "Português (Portugal)",
              "values-pt-rBR": "Português (Brasil)", "values-fr": "Français", "values-be": "Беларуская"}
+    navigation = json.loads((ROOT / "integrations/nagram/navigation-strings.json").read_text())
     for qualifier, native_name in names.items():
         source = ROOT / "core/localization/src/main/res" / qualifier / "strings.xml"
         root = ET.parse(source).getroot()
         strings = {item.attrib["name"]: "".join(item.itertext()) for item in root.findall("string")}
         translations = {key: strings[name] for name, keys in mapping.items() for key in keys}
-        translations.update(AppName="TG-MAX Ultimate", NoChats="TG-MAX Ultimate", LanguageName=native_name)
+        translations.update(navigation[qualifier])
+        translations.update(AppName="TG-MAX Ultimate", LanguageName=native_name)
         destination = resources / qualifier / "strings.xml"
         destination.parent.mkdir(parents=True, exist_ok=True)
         text = destination.read_text() if destination.exists() else '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
@@ -171,7 +175,8 @@ def configure_build(target):
     debug = text.index("        debug {", text.index("    buildTypes"))
     signing = text.index("signingConfig = signingConfigs.release", debug)
     text = text[:signing] + text[signing:].replace("signingConfig = signingConfigs.release", "signingConfig = signingConfigs.debug", 1)
-    text = re.sub(r"def verCode = \d+", "def verCode = 2", text, count=1)
+    release = json.loads((ROOT / "release.json").read_text())
+    text = re.sub(r"def verCode = \d+", f"def verCode = {release['versionCode']}", text, count=1)
     app.write_text(text)
     settings = target / "settings.gradle"
     settings.write_text(settings.read_text() + "\ninclude ':tgmax-backend'\n")
@@ -179,7 +184,7 @@ def configure_build(target):
     properties = target / "gradle.properties"
     text = properties.read_text()
     text = re.sub(r"(?m)^APP_PACKAGE=.*$", "APP_PACKAGE=io.github.lubara7.tgmax", text)
-    version = json.loads((ROOT / "release.json").read_text())["version"]
+    version = release["version"]
     text = re.sub(r"(?m)^APP_VERSION_NAME=.*$", "APP_VERSION_NAME=" + version, text)
     properties.write_text(text)
     variables = target / "TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java"

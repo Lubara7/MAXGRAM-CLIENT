@@ -67,11 +67,13 @@ def main():
     files = list((ROOT / "integrations/nagram/src/main/java").rglob("*.java"))
     adapter = "\n".join(p.read_text() for p in files)
     needed_fields = set(re.findall(r"\.(\w+)", adapter))
+    namespaces = [(name, "org/telegram/tgnet/" + path + name + ".java") for name, path in
+                  [("TLRPC", ""), ("TL_update", "tl/"), ("TL_account", "tl/")]]
     api = {}
-    for namespace, relative in [("TLRPC", "org/telegram/tgnet/TLRPC.java"), ("TL_update", "org/telegram/tgnet/tl/TL_update.java")]:
+    for namespace, relative in namespaces:
         for name, shape in classes((java / relative).read_text()).items():
             api[namespace + "." + name] = {**shape, "namespace": namespace}
-    needed = set(m[0] for m in re.finditer(r"(?:TLRPC|TL_update)\.\w+", adapter))
+    needed = set(m[0] for m in re.finditer(r"(?:TLRPC|TL_update|TL_account)\.\w+", adapter))
     selected = {}
     queue = list(needed)
     while queue:
@@ -81,13 +83,13 @@ def main():
         shape = api[qualified]
         fields = {k: v for k, v in shape["fields"].items() if k in needed_fields}
         selected[qualified] = {**shape, "fields": fields}
-        for match in re.finditer(r"(?:(TLRPC|TL_update)\.)?(\w+)", " ".join([shape["base"], *fields.values()])):
+        for match in re.finditer(r"(?:(TLRPC|TL_update|TL_account)\.)?(\w+)", " ".join([shape["base"], *fields.values()])):
             candidate = (match[1] or shape["namespace"]) + "." + match[2]
             if candidate in api and candidate not in selected: queue.append(candidate)
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     stubs = output / "api-shapes"
-    for namespace, relative in [("TLRPC", "org/telegram/tgnet/TLRPC.java"), ("TL_update", "org/telegram/tgnet/tl/TL_update.java")]:
+    for namespace, relative in namespaces:
         declarations = []
         for qualified, shape in selected.items():
             if shape["namespace"] != namespace: continue

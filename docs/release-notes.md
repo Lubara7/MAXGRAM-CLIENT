@@ -1,6 +1,8 @@
-TG-MAX Ultimate 0.2.0-alpha.1 — экспериментальная сборка из исходников NagramXF с начальным MAX backend.
+TG-MAX Ultimate 0.2.0-alpha.2 — экспериментальная сборка из исходников NagramXF с начальным MAX backend.
 
 APK: ARM64 (`arm64-v8a`), Android 8.1 и новее. Подпись Android debug; это предварительная сборка для проверки. Исходный код этой сборки и SHA-256 приложены.
+
+Экран «Устройства» получает список сеансов MAX. После подтверждения можно завершить все остальные сеансы. Названия основных разделов переведены для всех восьми вариантов языка.
 
 Подключены бинарный WebSocket transport MAX по Komet, начальная маршрутизация входа по телефону/коду/паролю, диалоги/история и текстовые операции. Исходный интерфейс — NagramXF. QR-вход, Telegram API credentials, inherited updater, Telegram push registration и Firebase initialization отключены.
 
