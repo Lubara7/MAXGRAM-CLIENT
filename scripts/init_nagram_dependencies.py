@@ -17,6 +17,7 @@ MODULES = [
     'TMessagesProj/jni/third_party/libprisma',
     'TMessagesProj/jni/tlottie',
     'TMessagesProj/jni/tgcalls',
+    'TMessagesProj/jni/third_party/wamr',
     'TMessagesProj/jni/third_party/ffmpeg',
     'TMessagesProj/jni/third_party/libvpx',
     'TMessagesProj/jni/third_party/dav1d',
@@ -37,6 +38,8 @@ def main():
         status = subprocess.check_output(['git', 'submodule', 'status', module], cwd=client, text=True)
         if not status.startswith(' '):
             raise SystemExit('Native dependency revision mismatch: ' + module)
+    if not (client / 'TMessagesProj/jni/third_party/wamr/core/iwasm/include/wasm_export.h').is_file():
+        raise SystemExit('Pinned WAMR checkout is missing its public Android header')
     print('Pinned normal-flavor dependencies initialized:', len(MODULES))
 
 
