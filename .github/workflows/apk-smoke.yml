@@ -1,0 +1,70 @@
+name: Install published APK
+on:
+  workflow_run:
+    workflows: ["Nagram APK release"]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  phone-screen:
+    if: github.event.workflow_run.conclusion == 'success' && contains(github.event.workflow_run.head_commit.message, '[release]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Download and verify the published APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(jq -r .tag release.json)
+          gh release download "$tag" -p '*.apk' -p SHA256SUMS.txt
+          awk '$2 ~ /\.apk$/ {print}' SHA256SUMS.txt | sha256sum --check --strict
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Allow emulator hardware acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Prepare phone-screen check
+        run: |
+          cat > smoke-phone.sh <<'SCRIPT'
+          set -euo pipefail
+          pkg=io.github.lubara7.tgmax
+          adb shell getprop ro.product.cpu.abilist | grep -F arm64-v8a
+          adb install ./*.apk
+          adb shell input keyevent KEYCODE_WAKEUP
+          adb shell wm dismiss-keyguard
+          activity=$(adb shell cmd package resolve-activity --brief "$pkg" | tail -n1 | tr -d '\r')
+          adb shell am start -W -n "$activity"
+          for attempt in $(seq 1 12); do
+            adb shell uiautomator dump /sdcard/tgmax-ui.xml >/dev/null 2>&1 || continue
+            adb pull /sdcard/tgmax-ui.xml login.xml >/dev/null
+            if python -c 'import xml.etree.ElementTree as E; assert any(n.get("package") == "io.github.lubara7.tgmax" and n.get("content-desc") == "Phone number" for n in E.parse("login.xml").iter("node"))'; then
+              adb exec-out screencap -p > login.png
+              exit 0
+            fi
+            sleep 2
+          done
+          adb logcat -b crash -d
+          exit 1
+          SCRIPT
+      - name: Install and open phone login
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          script: bash "$GITHUB_WORKSPACE/smoke-phone.sh"
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: phone-login-ui
+          path: |
+            login.xml
+            login.png
