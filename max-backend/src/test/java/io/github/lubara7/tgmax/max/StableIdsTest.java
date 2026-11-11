@@ -31,6 +31,25 @@ public class StableIdsTest {
         assertNotEquals(recent, ids.message(202, 10005, 5000));
     }
 
+    @Test public void fullHistoryPagesFitBeforeAndBetweenExistingMessages() {
+        Memory memory = new Memory();
+        StableIds ids = new StableIds(memory);
+        int left = ids.message(12, 500, 500);
+        int right = ids.message(12, 1000, 1000);
+        java.util.List<Map<String, Object>> page = new java.util.ArrayList<>();
+        for (long id = 600; id > 400; id--) page.add(Maps.of("id", id, "time", id));
+        ids.reserveHistory(12, page);
+        ids.flush();
+        StableIds restored = new StableIds(memory);
+        int previous = 0;
+        for (long id = 401; id <= 600; id++) {
+            int local = restored.findMessage(12, id).local;
+            assertTrue(local > previous && local < right);
+            if (id == 500) assertEquals(left, local);
+            previous = local;
+        }
+    }
+
     private static final class Memory implements StableIds.Storage {
         Map<String, String> values = new HashMap<>();
         @Override public Map<String, String> load() { return values; }

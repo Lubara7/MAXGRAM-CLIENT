@@ -1,6 +1,10 @@
 package io.github.lubara7.tgmax.max;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -69,12 +73,46 @@ public final class StableIds {
         else local = ((long) lower.getValue().local + upper.getValue().local) / 2;
         if (local <= 0 || local >= Integer.MAX_VALUE || messagesByLocal.containsKey((int) local))
             throw new MaxException("MAX_MESSAGE_INDEX_REQUIRES_RESYNC");
-        MessageId id = new MessageId(chat, server, time, (int) local);
-        messagesByLocal.put(id.local, id);
-        ordered.put(orderKey, id);
-        entries.put(key, time + ":" + local);
+        storeMessage(orderKey, (int) local);
+        return (int) local;
+    }
+
+    public synchronized void reserveHistory(long chat, List<Map<String, Object>> messages) {
+        List<Key> pending = new ArrayList<>();
+        Set<Long> seen = new HashSet<>();
+        for (Map<String, Object> raw : messages) {
+            long server = Maps.number(raw.get("id"));
+            if (seen.add(server) && findMessage(chat, server) == null)
+                pending.add(new Key(Maps.number(raw.get("time")), server, chat));
+        }
+        pending.sort(Key::compareTo);
+        int[] allocated = new int[pending.size()];
+        for (int start = 0; start < pending.size();) {
+            Key first = pending.get(start);
+            Map.Entry<Key, MessageId> lower = ordered.lowerEntry(first);
+            Map.Entry<Key, MessageId> upper = ordered.higherEntry(first);
+            int end = start + 1;
+            while (end < pending.size() && (upper == null || pending.get(end).compareTo(upper.getKey()) < 0)) end++;
+            long lo = lower == null ? 0 : lower.getValue().local;
+            long hi = upper == null ? Integer.MAX_VALUE : upper.getValue().local;
+            int count = end - start;
+            if (hi - lo - 1 < count) throw new MaxException("MAX_MESSAGE_INDEX_REQUIRES_RESYNC");
+            long step = Math.max(1, (hi - lo) / (count + 1L));
+            if (lower == null || upper == null) step = Math.min(1024, step);
+            long next = lo + step;
+            if (lower == null) next = upper == null ? (hi - step * (count - 1L)) / 2 : hi - step * count;
+            for (int i = start; i < end; i++, next += step) allocated[i] = (int) next;
+            start = end;
+        }
+        for (int i = 0; i < pending.size(); i++) storeMessage(pending.get(i), allocated[i]);
+    }
+
+    private void storeMessage(Key key, int local) {
+        MessageId id = new MessageId(key.chat, key.server, key.time, local);
+        messagesByLocal.put(local, id);
+        ordered.put(key, id);
+        entries.put("m:" + key.chat + ":" + key.server, key.time + ":" + local);
         dirty = true;
-        return id.local;
     }
 
     public synchronized MessageId message(int local) {
