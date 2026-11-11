@@ -41,7 +41,7 @@ class LocaleCoverageTest {
     }
 
     @Test fun `system language list contains exactly the supported tags`() {
-        val nodes = document(File("../../app/src/main/res/xml/locales_config.xml")).getElementsByTagName("locale")
+        val nodes = document(File("../../tools-auth-harness/src/main/res/xml/locales_config.xml")).getElementsByTagName("locale")
         val tags = (0 until nodes.length).map {
             (nodes.item(it) as Element).getAttribute("android:name")
         }

@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "sources": {
+    "nagramxf": {
+      "url": "https://github.com/Keeperorowner/NagramXF.git",
+      "commit": "49ae647f6b5555f80beae945af1ae6f6d0bbf877",
+      "branch": "dev",
+      "license": "GPL-3.0-or-later"
+    },
+    "komet": {
+      "url": "https://github.com/KometTeam/Komet.git",
+      "commit": "7bbb73bd2c05877e48b37f6ec6f096471a341404",
+      "branch": "main",
+      "license": "GPL-3.0-or-later"
+    }
+  }
+}

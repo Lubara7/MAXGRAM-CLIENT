@@ -1,0 +1,75 @@
+name: Nagram APK release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nagram-release
+  cancel-in-progress: false
+
+jobs:
+  build-release:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    env:
+      NATIVE_TARGET: arm64-v8a
+      GRADLE_OPTS: -Dorg.gradle.workers.max=2
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v6
+      - uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: tgmax-alpha-debug-keystore-v1
+      - name: Install native Android toolchain
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.2.12479018' 'cmake;3.31.6'
+      - name: Prepare pinned Nagram source
+        run: |
+          git submodule update --init --depth 1 upstream/nagramxf upstream/komet
+          python3 scripts/prepare_nagram_client.py
+          python3 scripts/init_nagram_dependencies.py
+      - name: Build real Nagram APK and test MAX backend
+        working-directory: build/nagram-client
+        run: ./gradlew --no-daemon --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g' :tgmax-backend:test :TMessagesProj:assembleNormalDebug
+      - name: Prepare and verify release artifacts
+        run: |
+          mkdir -p dist
+          python3 scripts/package_release.py --client build/nagram-client --output dist
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs dist/*.apk > dist/signature-verification.txt
+          cp docs/release-notes.md dist/release-notes.md
+      - uses: actions/upload-artifact@v6
+        with:
+          name: tgmax-nagram-apk
+          path: dist/*
+          if-no-files-found: error
+      - name: Publish prerelease with APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          RELEASE_TAG=$(python3 -c 'import json; print(json.load(open("release.json"))["tag"])')
+          gh release create "$RELEASE_TAG" dist/*.apk dist/SHA256SUMS.txt dist/signature-verification.txt dist/*-source.tar.gz --target "$GITHUB_SHA" --prerelease --title "TG-MAX Ultimate $RELEASE_TAG — Nagram alpha" --notes-file docs/release-notes.md
+      - name: Upload build reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: nagram-build-reports
+          path: |
+            build/nagram-client/**/build/reports/
+            build/nagram-client/TGMAX_CHANGES.*

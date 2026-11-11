@@ -25,4 +25,6 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "TG-MAX-Ultimate"
-include(":app", ":core:domain", ":core:data", ":core:ui", ":core:localization", ":feature:auth")
+include(":max-backend", ":auth-harness", ":core:domain", ":core:data", ":core:ui", ":core:localization", ":feature:auth")
+
+project(":auth-harness").projectDir = file("tools-auth-harness")

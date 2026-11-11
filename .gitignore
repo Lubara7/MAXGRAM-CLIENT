@@ -12,3 +12,7 @@ keystore.properties
 !.env.example
 captures/
 .DS_Store
+
+__pycache__/
+*.pyc
+dist/
