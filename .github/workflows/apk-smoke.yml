@@ -1,14 +1,14 @@
 name: Install published APK
 on:
   workflow_run:
-    workflows: ["Nagram APK release"]
+    workflows: ["Nagram APK release", "Publish built APK"]
     types: [completed]
     branches: [main]
 permissions:
   contents: read
 jobs:
   phone-screen:
-    if: github.event.workflow_run.conclusion == 'success' && contains(github.event.workflow_run.head_commit.message, '[release]')
+    if: github.event.workflow_run.conclusion == 'success' && (contains(github.event.workflow_run.head_commit.message, '[release]') || github.event.workflow_run.name == 'Publish built APK')
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:

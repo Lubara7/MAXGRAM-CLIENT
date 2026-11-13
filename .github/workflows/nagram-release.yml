@@ -33,7 +33,8 @@ jobs:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v6
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: alpha-key
         with:
           path: ${{ env.TGMAX_ALPHA_KEYSTORE }}
           key: tgmax-alpha-debug-keystore-v2
@@ -43,6 +44,11 @@ jobs:
           if [ ! -s "$TGMAX_ALPHA_KEYSTORE" ]; then
             keytool -genkeypair -keystore "$TGMAX_ALPHA_KEYSTORE" -storetype PKCS12 -alias androiddebugkey -storepass android -keypass android -dname 'CN=Android Debug,O=Android,C=US' -keyalg RSA -keysize 2048 -validity 10000
           fi
+      - uses: actions/cache/save@v4
+        if: steps.alpha-key.outputs.cache-hit != 'true'
+        with:
+          path: ${{ env.TGMAX_ALPHA_KEYSTORE }}
+          key: tgmax-alpha-debug-keystore-v2
       - name: Install native Android toolchain
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.2.12479018' 'cmake;3.31.6'
       - name: Prepare pinned Nagram source
