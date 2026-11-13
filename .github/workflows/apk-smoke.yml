@@ -20,12 +20,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag=$(jq -r .tag release.json)
-          gh release download "$tag" -p '*.apk' -p SHA256SUMS.txt
+          gh release download "$tag" -p '*.apk' -p SHA256SUMS.txt -p signature-verification.txt
           awk '$2 ~ /\.apk$/ {print}' SHA256SUMS.txt | sha256sum --check --strict
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
+      - uses: actions/cache/restore@v4
+        with:
+          path: /tmp/tgmax-signing/debug.keystore
+          key: tgmax-alpha-debug-keystore-v2
+      - name: Verify the saved alpha signing certificate
+        run: |
+          keytool -exportcert -keystore /tmp/tgmax-signing/debug.keystore -alias androiddebugkey -storepass android -file alpha-certificate.der
+          python3 - <<'PYCODE'
+          import hashlib, pathlib, re
+          certificate = pathlib.Path('alpha-certificate.der').read_bytes()
+          report = pathlib.Path('signature-verification.txt').read_text()
+          expected = re.search(r'Signer #1 certificate SHA-256 digest: ([0-9a-fA-F]+)', report)[1].lower()
+          assert hashlib.sha256(certificate).hexdigest() == expected
+          print('Published APK matches the saved alpha signing key')
+          PYCODE
       - name: Allow emulator hardware acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
