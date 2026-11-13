@@ -9,6 +9,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 public final class MaxApi {
     private final MaxClient client;
@@ -16,14 +18,51 @@ public final class MaxApi {
     public MaxApi(MaxClient client) { this.client = client; }
 
     public CompletableFuture<Map<String, Object>> requestCode(String phone, boolean resend) {
+        return requestCode(phone, resend, link -> {
+            CompletableFuture<String> missing = new CompletableFuture<>();
+            missing.completeExceptionally(new MaxException("MAX_CAPTCHA_REQUIRED"));
+            return missing;
+        });
+    }
+
+    public CompletableFuture<Map<String, Object>> requestCaptcha(String phone) {
         if (!phone.matches("\\+[1-9][0-9]{7,14}")) throw new MaxException("PHONE_NUMBER_INVALID");
-        return client.connect().thenCompose(unused -> {
+        return client.connect().thenCompose(unused -> client.request(MaxOpcode.AUTH_CAPTCHA,
+                Maps.of("source", "auth", "identifier", phone)));
+    }
+
+    public CompletableFuture<Map<String, Object>> requestCode(String phone, boolean resend,
+            Function<String, CompletableFuture<String>> captchaHandler) {
+        CompletableFuture<Map<String, Object>> result = new CompletableFuture<>();
+        AtomicReference<CompletableFuture<String>> challenge = new AtomicReference<>();
+        result.whenComplete((data, failure) -> {
+            CompletableFuture<String> active = challenge.get();
+            if (result.isCancelled() && active != null) active.cancel(false);
+        });
+        requestCaptcha(phone).thenCompose(data -> {
+            if (result.isDone()) throw new MaxException("MAX_CAPTCHA_CANCELLED");
+            String link = Maps.string(data.get("link"));
+            if (link.isEmpty()) return CompletableFuture.completedFuture((String) null);
+            CompletableFuture<String> answer = captchaHandler.apply(link);
+            challenge.set(answer);
+            if (result.isCancelled()) answer.cancel(false);
+            return answer.thenApply(token -> {
+                if (token == null || token.isEmpty()) throw new MaxException("MAX_CAPTCHA_CANCELLED");
+                return token;
+            });
+        }).thenCompose(token -> {
+            if (result.isDone()) throw new MaxException("MAX_CAPTCHA_CANCELLED");
             Map<String, Object> payload = Maps.of("phone", phone, "type", resend ? "RESEND" : "START_AUTH",
                     "language", client.device().language);
+            if (token != null) payload.put("captchaToken", token);
             byte[] fingerprint = fingerprint();
             if (fingerprint != null) payload.put("mode", fingerprint);
             return client.request(MaxOpcode.AUTH_REQUEST, payload);
+        }).whenComplete((data, failure) -> {
+            if (failure == null) result.complete(data);
+            else result.completeExceptionally(failure);
         });
+        return result;
     }
 
     public CompletableFuture<Map<String, Object>> verifyCode(String code, String token) {

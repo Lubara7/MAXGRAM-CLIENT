@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Function;
 import okhttp3.OkHttpClient;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.LocaleController;
@@ -40,6 +41,12 @@ public final class TgMaxRuntime {
     private volatile String passwordTrack;
     private volatile String passwordHint = "";
     private volatile String authPhone = "";
+    private volatile Function<String, CompletableFuture<String>> captchaHandler;
+
+    public void setCaptchaHandler(Function<String, CompletableFuture<String>> handler) { captchaHandler = handler; }
+    public void clearCaptchaHandler(Function<String, CompletableFuture<String>> handler) {
+        if (captchaHandler == handler) captchaHandler = null;
+    }
 
     public static boolean enabled() { return true; }
     public boolean needsPassword() { return passwordTrack != null; }
@@ -68,7 +75,7 @@ public final class TgMaxRuntime {
         android.util.DisplayMetrics display = context.getResources().getDisplayMetrics();
         MaxDevice device = new MaxDevice(local.deviceId(), TgMaxLocales.code(LocaleController.getLocaleStringIso639()),
                 "Android " + Build.VERSION.RELEASE, display.widthPixels + "x" + display.heightPixels,
-                TimeZone.getDefault().getID(), "TG-MAX-Ultimate/0.2 Android/" + Build.VERSION.SDK_INT);
+                TimeZone.getDefault().getID(), android.webkit.WebSettings.getDefaultUserAgent(context));
         client = new MaxClient(new OkHttpClient.Builder().connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS).build(), device);
         api = new MaxApi(client);
         client.addPushListener(frame -> executor.execute(() -> {
@@ -136,11 +143,11 @@ public final class TgMaxRuntime {
             passwordTrack = null;
             passwordHint = "";
             authPhone = phone(r.phone_number);
-            return api.requestCode(phone(r.phone_number), false).thenApplyAsync(this::sentCode, executor);
+            return requestCode(phone(r.phone_number), false);
         }
         if (request instanceof TLRPC.TL_auth_resendCode) {
             TLRPC.TL_auth_resendCode r = (TLRPC.TL_auth_resendCode) request;
-            return api.requestCode(phone(r.phone_number), true).thenApplyAsync(this::sentCode, executor);
+            return requestCode(phone(r.phone_number), true);
         }
         if (request instanceof TLRPC.TL_auth_signIn) {
             TLRPC.TL_auth_signIn r = (TLRPC.TL_auth_signIn) request;
@@ -299,16 +306,26 @@ public final class TgMaxRuntime {
         return login;
     }
 
+    private CompletableFuture<TLObject> requestCode(String phone, boolean resend) {
+        Function<String, CompletableFuture<String>> handler = captchaHandler;
+        CompletableFuture<Map<String, Object>> operation = handler == null
+                ? api.requestCode(phone, resend) : api.requestCode(phone, resend, handler);
+        CompletableFuture<TLObject> result = operation.thenApplyAsync(this::sentCode, executor);
+        result.whenComplete((value, failure) -> { if (result.isCancelled()) operation.cancel(false); });
+        return result;
+    }
+
     private TLObject sentCode(Map<String, Object> data) {
         String token = Maps.string(data.get("token"));
         if (token.isEmpty()) throw new MaxException("MAX_AUTH_TOKEN_MISSING");
         TLRPC.TL_auth_sentCode response = new TLRPC.TL_auth_sentCode();
         TLRPC.TL_auth_sentCodeTypeSms type = new TLRPC.TL_auth_sentCodeTypeSms();
-        type.length = 6;
+        type.length = Math.toIntExact(Maps.number(data.get("codeLength"), 6));
+        if (type.length < 1 || type.length > 12) throw new MaxException("MAX_CODE_LENGTH_INVALID");
         response.type = type;
         response.phone_code_hash = token;
         response.next_type = new TLRPC.TL_auth_codeTypeSms();
-        response.timeout = 60;
+        response.timeout = (int) Math.min(3600, Math.max(1, (Maps.number(data.get("altActionDuration"), 60_000) + 999) / 1000));
         response.flags = 6;
         return response;
     }

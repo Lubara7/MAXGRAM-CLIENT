@@ -47,6 +47,8 @@ jobs:
           git submodule update --init --depth 1 upstream/nagramxf
           python3 scripts/check_nagram_api.py
           python3 scripts/prepare_nagram_client.py
+          python3 scripts/check_login_preparation.py
+          node scripts/test_captcha_bridge.mjs
       - name: Upload test and lint reports
         if: always()
         uses: actions/upload-artifact@v6

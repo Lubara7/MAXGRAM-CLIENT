@@ -1,8 +1,8 @@
 {
-  "version": "0.2.0-alpha.4",
-  "tag": "v0.2.0-alpha.4",
+  "version": "0.2.0-alpha.5",
+  "tag": "v0.2.0-alpha.5",
   "prerelease": true,
   "abi": "arm64-v8a",
   "minSdk": 27,
-  "versionCode": 5
+  "versionCode": 6
 }

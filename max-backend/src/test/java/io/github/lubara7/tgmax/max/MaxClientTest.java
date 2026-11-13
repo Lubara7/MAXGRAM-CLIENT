@@ -45,6 +45,9 @@ public class MaxClientTest {
                 if (order.getAndIncrement() == 0) {
                     assertEquals(MaxOpcode.INIT, f.opcode);
                     respond(ws, f, Maps.of());
+                } else if (f.opcode == MaxOpcode.AUTH_CAPTCHA) {
+                    assertEquals("auth", Maps.object(f.payload).get("source"));
+                    respond(ws, f, Maps.of());
                 } else {
                     assertEquals(MaxOpcode.AUTH_REQUEST, f.opcode);
                     assertEquals("START_AUTH", Maps.object(f.payload).get("type"));
@@ -141,6 +144,61 @@ public class MaxClientTest {
         assertEquals(java.util.List.of(96), requests);
         api.terminateOtherSessions().get(4, TimeUnit.SECONDS);
         assertEquals(java.util.List.of(96, 97), requests);
+    }
+
+    @Test public void authWaitsForCaptchaAndSendsItsTokenOnlyToCodeRequest() throws Exception {
+        java.util.List<Integer> opcodes = new java.util.concurrent.CopyOnWriteArrayList<>();
+        CountDownLatch requested = new CountDownLatch(1);
+        CompletableFuture<String> proof = new CompletableFuture<>();
+        MaxClient client = start(new WebSocketListener() {
+            @Override public void onMessage(WebSocket ws, ByteString bytes) {
+                MaxFrame frame = codec.decode(bytes.toByteArray());
+                if (frame.opcode == MaxOpcode.INIT) { respond(ws, frame, Maps.of()); return; }
+                opcodes.add(frame.opcode);
+                if (frame.opcode == 224) {
+                    assertEquals(Maps.of("source", "auth", "identifier", "+19995550123"), frame.payload);
+                    respond(ws, frame, Maps.of("link", "https://captcha.vk.com/synthetic"));
+                } else {
+                    assertEquals(17, frame.opcode);
+                    assertEquals("synthetic-proof", Maps.object(frame.payload).get("captchaToken"));
+                    respond(ws, frame, Maps.of("token", "synthetic-code-token", "codeLength", 6));
+                }
+            }
+        }, 2_000);
+        CompletableFuture<Map<String, Object>> result = new MaxApi(client).requestCode("+19995550123", false, link -> {
+            assertEquals("https://captcha.vk.com/synthetic", link);
+            requested.countDown();
+            return proof;
+        });
+        assertTrue(requested.await(3, TimeUnit.SECONDS));
+        assertEquals(java.util.List.of(224), opcodes);
+        assertFalse(result.isDone());
+        proof.complete("synthetic-proof");
+        assertEquals("synthetic-code-token", result.get(4, TimeUnit.SECONDS).get("token"));
+        assertEquals(java.util.List.of(224, 17), opcodes);
+    }
+
+    @Test public void cancelledCaptchaNeverRequestsSms() throws Exception {
+        CountDownLatch requested = new CountDownLatch(1);
+        CompletableFuture<String> proof = new CompletableFuture<>();
+        AtomicInteger sms = new AtomicInteger();
+        MaxClient client = start(new WebSocketListener() {
+            @Override public void onMessage(WebSocket ws, ByteString bytes) {
+                MaxFrame frame = codec.decode(bytes.toByteArray());
+                if (frame.opcode == MaxOpcode.INIT) respond(ws, frame, Maps.of());
+                else if (frame.opcode == 224) respond(ws, frame, Maps.of("link", "https://captcha.vk.com/synthetic"));
+                else sms.incrementAndGet();
+            }
+        }, 2_000);
+        CompletableFuture<Map<String, Object>> result = new MaxApi(client).requestCode("+19995550123", false, link -> {
+            requested.countDown();
+            return proof;
+        });
+        assertTrue(requested.await(3, TimeUnit.SECONDS));
+        result.cancel(false);
+        assertTrue(proof.isCancelled());
+        assertFalse(proof.complete("late-proof"));
+        assertEquals(0, sms.get());
     }
 
     private void respond(WebSocket ws, MaxFrame request, Object payload) {

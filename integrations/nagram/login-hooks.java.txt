@@ -1,0 +1,41 @@
+    private AlertDialog maxCaptchaDialog;
+    private final java.util.function.Function<String, java.util.concurrent.CompletableFuture<String>> maxCaptchaHandler = this::showMaxCaptcha;
+
+    private String maxAuthError(String code) {
+        if (code.equals("MAX_CAPTCHA_WEBVIEW_UPDATE")) return getString(R.string.TgMaxCaptchaWebViewUpdate);
+        if (code.equals("MAX_captcha.validation-failed")) return getString(R.string.TgMaxCaptchaRejected);
+        if (code.startsWith("MAX_CAPTCHA_"))
+            return getString(R.string.TgMaxCaptchaLoadError);
+        return code;
+    }
+
+    private java.util.concurrent.CompletableFuture<String> showMaxCaptcha(String link) {
+        java.util.concurrent.CompletableFuture<String> result = new java.util.concurrent.CompletableFuture<>();
+        AndroidUtilities.runOnUIThread(() -> {
+            if (getParentActivity() == null || result.isDone()) {
+                result.completeExceptionally(new io.github.lubara7.tgmax.max.MaxException("MAX_CAPTCHA_CANCELLED"));
+                return;
+            }
+            io.github.lubara7.tgmax.nagram.TgMaxCaptcha captcha = new io.github.lubara7.tgmax.nagram.TgMaxCaptcha(
+                    getParentActivity(), link, LocaleController.getLocaleStringIso639(), Theme.isCurrentThemeDark());
+            captcha.setMinimumHeight(Math.min(AndroidUtilities.dp(420), AndroidUtilities.displaySize.y * 2 / 3));
+            AlertDialog dialog = new AlertDialog.Builder(getParentActivity())
+                    .setTitle(getString(R.string.TgMaxCaptchaTitle))
+                    .setView(captcha)
+                    .setNegativeButton(getString(R.string.Cancel), (d, which) -> captcha.close())
+                    .create();
+            maxCaptchaDialog = dialog;
+            result.whenComplete((token, failure) -> AndroidUtilities.runOnUIThread(() -> {
+                dialog.dismiss();
+                captcha.close();
+                if (maxCaptchaDialog == dialog) maxCaptchaDialog = null;
+            }));
+            if (showDialog(dialog, d -> captcha.close()) == null) captcha.close();
+            captcha.result.whenComplete((token, failure) -> {
+                if (failure == null) result.complete(token);
+                else result.completeExceptionally(failure);
+            });
+        });
+        return result;
+    }
+

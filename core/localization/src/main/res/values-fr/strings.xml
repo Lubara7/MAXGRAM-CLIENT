@@ -10,7 +10,7 @@
     <string name="action_resend">Renvoyer le code</string>
     <string name="action_edit_phone">Modifier le numéro</string>
     <string name="phone_title">Votre numéro de téléphone</string>
-    <string name="phone_description">Choisissez votre pays et saisissez votre numéro de téléphone pour vous connecter à MAX.</string>
+    <string name="phone_description">Vérifiez l’indicatif du pays et saisissez le numéro de téléphone de votre compte MAX.</string>
     <string name="phone_label">Numéro de téléphone</string>
     <string name="country_title">Pays</string>
     <string name="country_search">Rechercher un pays</string>
@@ -35,4 +35,8 @@
         <item quantity="one">Réessayez dans %1$d seconde</item>
         <item quantity="other">Réessayez dans %1$d secondes</item>
     </plurals>
+    <string name="captcha_title">Confirmez que vous êtes une personne</string>
+    <string name="captcha_load_error">Impossible de charger la vérification. Réessayez.</string>
+    <string name="captcha_webview_update">Mettez à jour Android System WebView pour effectuer la vérification.</string>
+    <string name="captcha_rejected">MAX a refusé la vérification. Appuyez sur Continuer et réessayez.</string>
 </resources>

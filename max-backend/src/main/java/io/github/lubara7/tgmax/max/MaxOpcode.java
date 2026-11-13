@@ -25,6 +25,7 @@ public final class MaxOpcode {
     public static final int CHECK_PASSWORD = 115;
     public static final int MESSAGE = 128;
     public static final int CHAT_UPDATE = 135;
+    public static final int AUTH_CAPTCHA = 224;
 
     private MaxOpcode() { }
 }

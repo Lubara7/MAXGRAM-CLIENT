@@ -12,7 +12,7 @@
     <string name="action_resend">Resend code</string>
     <string name="action_edit_phone">Change phone number</string>
     <string name="phone_title">Your phone number</string>
-    <string name="phone_description">Choose your country and enter your phone number to sign in to MAX.</string>
+    <string name="phone_description">Check the country code and enter the phone number from your MAX account.</string>
     <string name="phone_label">Phone number</string>
     <string name="country_title">Country</string>
     <string name="country_search">Search countries</string>
@@ -37,4 +37,8 @@
         <item quantity="one">Try again in %1$d second</item>
         <item quantity="other">Try again in %1$d seconds</item>
     </plurals>
+    <string name="captcha_title">Confirm you are human</string>
+    <string name="captcha_load_error">The verification page could not be loaded. Please try again.</string>
+    <string name="captcha_webview_update">Update Android System WebView to complete the verification.</string>
+    <string name="captcha_rejected">MAX did not accept the verification. Tap Continue and try the verification again.</string>
 </resources>
