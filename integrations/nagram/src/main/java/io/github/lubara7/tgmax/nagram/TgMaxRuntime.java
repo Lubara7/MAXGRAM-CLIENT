@@ -335,17 +335,15 @@ public final class TgMaxRuntime {
     }
 
     private TLObject sentCode(Map<String, Object> data) {
-        String token = Maps.string(data.get("token"));
-        MaxCallOut.Params call = data.get("callOutParams") == null ? null : new MaxCallOut.Params(data.get("callOutParams"));
-        if (token.isEmpty() && call == null) throw new MaxException("MAX_AUTH_TOKEN_MISSING");
-        TLRPC.TL_auth_sentCode response = call == null ? new TLRPC.TL_auth_sentCode() : new CallSentCode(call);
+        MaxAuthChallenge challenge = new MaxAuthChallenge(data);
+        if (challenge.call != null) return new CallSentCode(challenge.call);
+        TLRPC.TL_auth_sentCode response = new TLRPC.TL_auth_sentCode();
         TLRPC.TL_auth_sentCodeTypeSms type = new TLRPC.TL_auth_sentCodeTypeSms();
-        type.length = Math.toIntExact(Maps.number(data.get("codeLength"), 6));
-        if (type.length < 1 || type.length > 12) throw new MaxException("MAX_CODE_LENGTH_INVALID");
+        type.length = challenge.codeLength;
         response.type = type;
-        response.phone_code_hash = token;
+        response.phone_code_hash = challenge.token;
         response.next_type = new TLRPC.TL_auth_codeTypeSms();
-        response.timeout = (int) Math.min(3600, Math.max(1, (Maps.number(data.get("altActionDuration"), 60_000) + 999) / 1000));
+        response.timeout = challenge.resendSeconds;
         response.flags = 6;
         return response;
     }

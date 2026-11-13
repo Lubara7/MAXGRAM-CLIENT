@@ -13,6 +13,7 @@ import io.github.lubara7.tgmax.max.MaxCallOut;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
+import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
@@ -29,7 +30,7 @@ public final class TgMaxCallActivity extends BaseFragment {
     private final BiConsumer<TLObject, Throwable> completion;
     private TextView timer, button;
     private String callNumber = "";
-    private long deadline;
+    private final long deadline;
     private boolean stopped, disposed, inFlight;
     private CompletableFuture<?> operation;
     private final Runnable poll = this::check;
@@ -59,7 +60,7 @@ public final class TgMaxCallActivity extends BaseFragment {
         content.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(content, LayoutHelper.createFrame(-1, -2, Gravity.TOP, 24, 44, 24, 0));
         TextView title = text(context, 24, Theme.key_windowBackgroundWhiteBlackText);
-        title.setText(LocaleController.formatString(R.string.TgMaxCallTitle, phone));
+        title.setText(LocaleController.formatString(R.string.TgMaxCallTitle, PhoneFormat.getInstance().format(phone)));
         content.addView(title, LayoutHelper.createLinear(-1, -2));
         TextView description = text(context, 16, Theme.key_windowBackgroundWhiteGrayText);
         description.setText(LocaleController.getString(R.string.TgMaxCallDescription));
@@ -136,7 +137,7 @@ public final class TgMaxCallActivity extends BaseFragment {
             } else if (data.status == 3) { expire(); return; }
             else if (data.status == 1) {
                 callNumber = data.callNumber;
-                button.setText(LocaleController.formatString(R.string.TgMaxCallButton, callNumber));
+                button.setText(LocaleController.formatString(R.string.TgMaxCallButton, PhoneFormat.getInstance().format(callNumber)));
                 button.setEnabled(true);
             }
             AndroidUtilities.runOnUIThread(poll, Math.min(params.pollingIntervalMillis, Math.max(1, deadline - SystemClock.elapsedRealtime())));

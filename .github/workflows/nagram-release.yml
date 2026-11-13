@@ -13,7 +13,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')
     concurrency:
       group: nagram-release
-      cancel-in-progress: false
+      cancel-in-progress: true
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     permissions:
