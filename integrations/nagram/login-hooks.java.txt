@@ -25,13 +25,12 @@
                     .setNegativeButton(getString(R.string.Cancel), (d, which) -> captcha.close())
                     .create();
             maxCaptchaDialog = dialog;
-            dialog.setOnDismissListener(d -> captcha.close());
             result.whenComplete((token, failure) -> AndroidUtilities.runOnUIThread(() -> {
                 dialog.dismiss();
                 captcha.close();
                 if (maxCaptchaDialog == dialog) maxCaptchaDialog = null;
             }));
-            showDialog(dialog);
+            if (showDialog(dialog, d -> captcha.close()) == null) captcha.close();
             captcha.result.whenComplete((token, failure) -> {
                 if (failure == null) result.complete(token);
                 else result.completeExceptionally(failure);
