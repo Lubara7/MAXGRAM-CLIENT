@@ -196,6 +196,7 @@ public class MaxClientTest {
         });
         assertTrue(requested.await(3, TimeUnit.SECONDS));
         result.cancel(false);
+        proof.handle((token, failure) -> null).get(3, TimeUnit.SECONDS);
         assertTrue(proof.isCancelled());
         assertFalse(proof.complete("late-proof"));
         assertEquals(0, sms.get());
