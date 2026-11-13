@@ -57,7 +57,7 @@ def guard_mtproto(target):
             continue
         text = path.read_text()
         for name in names:
-            text = re.sub(r"(ConnectionsManager\.)" + name + r"\s*\(", r"\1tgmax_" + name + "(", text)
+            text = re.sub(r"(ConnectionsManager(?:\.getInstance\([^()]*\))?\s*\.\s*)" + name + r"\s*\(", r"\1tgmax_" + name + "(", text)
             if re.search(r"import\s+(?:static\s+)?org\.telegram\.tgnet\.ConnectionsManager\." + name + r"\b", text):
                 text = re.sub(r"\b" + name + r"\b", "tgmax_" + name, text)
         if text != path.read_text():
@@ -337,7 +337,7 @@ def verify_guards(target, native_names):
                 text_without_declarations = re.sub(r"public static native [^;]+;", "", text)
                 if re.search(r"\b" + name + r"\s*\(", text_without_declarations):
                     raise RuntimeError(f"Unprotected native call: {name}")
-            elif re.search(r"ConnectionsManager\." + name + r"\s*\(", text):
+            elif re.search(r"\b" + name + r"\s*\(", text):
                 raise RuntimeError(f"Unprotected native call in {path}")
 
 
