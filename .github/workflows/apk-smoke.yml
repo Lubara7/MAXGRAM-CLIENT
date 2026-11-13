@@ -40,7 +40,7 @@ jobs:
           set -euo pipefail
           pkg=io.github.lubara7.tgmax
           adb shell getprop ro.product.cpu.abilist | grep -F arm64-v8a
-          adb install ./*.apk
+          adb install -g ./*.apk
           adb shell input keyevent KEYCODE_WAKEUP
           adb shell wm dismiss-keyguard
           activity=$(adb shell cmd package resolve-activity --brief "$pkg" | tail -n1 | tr -d '\r')
