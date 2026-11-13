@@ -18,6 +18,8 @@ MODULES = [
     'TMessagesProj/jni/tlottie',
     'TMessagesProj/jni/tgcalls',
     'TMessagesProj/jni/third_party/wamr',
+    'TMessagesProj/jni/third_party/openh264',
+    'TMessagesProj/jni/td',
     'TMessagesProj/jni/third_party/ffmpeg',
     'TMessagesProj/jni/third_party/libvpx',
     'TMessagesProj/jni/third_party/dav1d',
