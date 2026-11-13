@@ -9,7 +9,7 @@ public final class MaxDevice {
     public final String osVersion;
     public final String screen;
     public final String timezone;
-    public final String userAgent;
+    public volatile String userAgent;
 
     public MaxDevice(String id, String language, String osVersion, String screen, String timezone, String userAgent) {
         this.id = id;

@@ -61,3 +61,7 @@ jobs:
             login-country.xml
             countries.xml
             countries.png
+            startup-logcat.txt
+            activity-state.txt
+            failure.png
+            anr-traces/

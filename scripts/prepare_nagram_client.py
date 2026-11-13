@@ -176,6 +176,7 @@ def configure_build(target):
     debug = text.index("        debug {", text.index("    buildTypes"))
     signing = text.index("signingConfig = signingConfigs.release", debug)
     text = text[:signing] + text[signing:].replace("signingConfig = signingConfigs.release", "signingConfig = signingConfigs.debug", 1)
+    text += '\nif (System.getenv("TGMAX_ALPHA_KEYSTORE")) {\n    android.signingConfigs.debug.storeFile = file(System.getenv("TGMAX_ALPHA_KEYSTORE"))\n}\n'
     release = json.loads((ROOT / "release.json").read_text())
     text = re.sub(r"def verCode = \d+", f"def verCode = {release['versionCode']}", text, count=1)
     app.write_text(text)
@@ -305,6 +306,7 @@ def restrict_max_ui(target):
                     onFieldError(phoneOutlineView, false);
                     return;
                 }}
+                {runtime}.get(currentAccount).preparePhoneAuth(android.webkit.WebSettings.getDefaultUserAgent(getParentActivity()));
                 Bundle params = new Bundle();
                 params.putString("phoneFormated", digits);
                 params.putString("phone", "+" + digits);

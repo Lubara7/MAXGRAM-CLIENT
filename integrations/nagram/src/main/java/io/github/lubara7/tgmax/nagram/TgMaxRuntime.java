@@ -43,6 +43,10 @@ public final class TgMaxRuntime {
     private volatile String authPhone = "";
     private volatile Function<String, CompletableFuture<String>> captchaHandler;
 
+    public void preparePhoneAuth(String userAgent) {
+        if (userAgent != null && !userAgent.isEmpty()) client.device().userAgent = userAgent;
+    }
+
     public void setCaptchaHandler(Function<String, CompletableFuture<String>> handler) { captchaHandler = handler; }
     public void clearCaptchaHandler(Function<String, CompletableFuture<String>> handler) {
         if (captchaHandler == handler) captchaHandler = null;
@@ -75,7 +79,7 @@ public final class TgMaxRuntime {
         android.util.DisplayMetrics display = context.getResources().getDisplayMetrics();
         MaxDevice device = new MaxDevice(local.deviceId(), TgMaxLocales.code(LocaleController.getLocaleStringIso639()),
                 "Android " + Build.VERSION.RELEASE, display.widthPixels + "x" + display.heightPixels,
-                TimeZone.getDefault().getID(), android.webkit.WebSettings.getDefaultUserAgent(context));
+                TimeZone.getDefault().getID(), "TG-MAX-Ultimate/0.2 Android/" + Build.VERSION.SDK_INT);
         client = new MaxClient(new OkHttpClient.Builder().connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS).build(), device);
         api = new MaxApi(client);
         client.addPushListener(frame -> executor.execute(() -> {
