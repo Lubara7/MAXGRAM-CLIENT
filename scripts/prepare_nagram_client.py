@@ -83,13 +83,12 @@ def guard_mtproto(target):
     text = connection.read_text()
     position = text.rfind("}")
     connection.write_text(text[:position] + "\n" + "\n".join(wrappers) + "\n" + text[position:])
-    anchor = "            NativeByteBuffer buffer = new NativeByteBuffer(finalRequestObject.getObjectSize());"
-    change(connection, anchor, f"""            if ({runtime}.enabled()) {{
-                {runtime}.get(currentAccount).send(requestToken, finalRequestObject, finalOnComplete,
-                        onCompleteTimestamp, onQuickAck, onWriteToSocket);
-                return;
-            }}
-{anchor}""")
+    add_after_opening(connection, r"private void sendRequestInternal\([^)]*\)", f"""        if ({runtime}.enabled()) {{
+            {runtime}.get(currentAccount).send(requestToken, object, onCompleteOrig,
+                    onCompleteTimestamp, onQuickAck, onWriteToSocket);
+            return;
+        }}
+""")
     return names
 
 
@@ -278,6 +277,91 @@ def isolate_client_services(target):
                       f"        if ({runtime}.enabled() && (id == nkbtnQrLogin || id == 15 || id == nkbtnFeed)) return null;\n")
 
 
+def restrict_max_ui(target):
+    java = target / "TMessagesProj/src/main/java/org/telegram"
+    ui = java / "ui"
+    phone = ui / "LoginActivity.java"
+    src = phone.read_text()
+    start = src.index("        moreButtonView.addSubItem(0,")
+    end = src.index("        sizeNotifierFrameLayout.addView(moreButtonView", start)
+    src = src[:start] + "        moreButtonView.setVisibility(View.GONE);\n" + src[end:]
+    phone.write_text(src)
+    change(phone, "moreButtonView.setVisibility(activityMode == MODE_LOGIN && currentViewNum == VIEW_PHONE_INPUT ? View.VISIBLE : View.GONE);",
+           "moreButtonView.setVisibility(View.GONE);", 3)
+    runtime = JAVA_PREFIX + "TgMaxRuntime"
+    add_after_opening(phone, r"public void fillNumber\(\)", f"        if ({runtime}.enabled()) return;\n")
+    add_after_opening(phone, r"public void setPage\(@ViewNumber int page, boolean animated, Bundle params, boolean back\)",
+                      "        if (page == VIEW_QR_LOGIN) return;\n")
+    anchor = "            TelephonyManager tm = "
+    src = phone.read_text()
+    start = src.index("public void onNextPressed(String code)", src.index("public class PhoneView"))
+    pos = src.index(anchor, start)
+    src = src[:pos] + f"""            if ({runtime}.enabled() && activityMode == MODE_LOGIN) {{
+                String digits = PhoneFormat.stripExceptNumbers(codeField.getText().toString())
+                        + PhoneFormat.stripExceptNumbers(phoneField.getText().toString());
+                if (codeField.length() == 0 || phoneField.length() == 0 || !digits.matches("[1-9][0-9]{{7,14}}")) {{
+                    onFieldError(phoneOutlineView, false);
+                    return;
+                }}
+                Bundle params = new Bundle();
+                params.putString("phoneFormated", digits);
+                params.putString("phone", "+" + digits);
+                params.putString("ephone", "+" + digits);
+                if (currentCountry != null) params.putString("country", currentCountry.code);
+                TLRPC.TL_auth_sendCode request = new TLRPC.TL_auth_sendCode();
+                request.phone_number = "+" + digits;
+                nextPressed = true;
+                int token = ConnectionsManager.getInstance(currentAccount).sendRequest(request, (response, error) ->
+                        AndroidUtilities.runOnUIThread(() -> {{
+                            nextPressed = false;
+                            needHideProgress(false);
+                            if (getParentActivity() == null || currentViewNum != VIEW_PHONE_INPUT) return;
+                            if (error == null && response instanceof TLRPC.TL_auth_sentCode) {{
+                                fillNextCodeParams(params, (TLRPC.auth_SentCode) response);
+                            }} else {{
+                                needShowAlert(getString(R.string.ErrorOccurred), error == null
+                                        ? getString(R.string.ErrorOccurred) : error.text);
+                            }}
+                        }}));
+                needShowProgress(token);
+                return;
+            }}
+""" + src[pos:]
+    phone.write_text(src)
+    data = ui / "DataSettingsActivity.java"
+    for row in ("proxySectionRow", "proxyRow", "proxySection2Row"):
+        change(data, row + " = rowCount++;", row + " = -1;")
+    change(ui / "DialogsActivity.java", "final boolean proxyVisible = !SharedConfig.proxyList.isEmpty();",
+           "final boolean proxyVisible = false;")
+    profile = ui / "ProfileActivity.java"
+    source = profile.read_text()
+    lines = [line for line in source.splitlines(keepends=True) if 'new SearchResult(220,' in line and 'ProxyListActivity' in line]
+    if len(lines) != 1: raise RuntimeError("Missing proxy search item")
+    change(profile, lines[0], "")
+    add_after_opening(java / "messenger/AndroidUtilities.java", r"public static void showProxyAlert\(Activity activity, final ProxySettings settings\)",
+                      f"        if ({runtime}.enabled()) return;\n")
+    add_after_opening(ui / "ProxyListActivity.java", r"public boolean onFragmentCreate\(\)",
+                      f"        if ({runtime}.enabled()) return false;\n")
+    change(ui / "ProxySettingsActivity.java", "public class ProxySettingsActivity extends BaseFragment {",
+           "public class ProxySettingsActivity extends BaseFragment {\n    @Override public boolean onFragmentCreate() { return false; }")
+    for row in ("nekoRow", "nekoSectionRow", "filtersRow"):
+        change(profile, row + " = rowCount++;", row + " = -1;")
+    change(profile, "boolean hidePremium = NaConfig.INSTANCE.getHidePremiumSection().Bool();", "boolean hidePremium = true;")
+    change(profile, "boolean hideHelp = NaConfig.INSTANCE.getHideHelpSection().Bool();", "boolean hideHelp = true;")
+    anchor = "            ArrayList<SettingsSearchResult> nagramSettings = SettingsHelper.onCreateSearchArray("
+    change(profile, anchor, f"""            if ({runtime}.enabled()) {{
+                return Arrays.stream(arr).filter(item -> item != null && (item.guid == 108 || item.guid == 110 ||
+                        item.guid == 502 || item.guid == 400 || item.guid == 300 || item.guid == 301 ||
+                        item.guid == 900 || (item.guid >= 202 && item.guid <= 205)))
+                        .toArray(SearchResult[]::new);
+            }}
+{anchor}""")
+    add_after_opening(profile, r"public void loadFaqWebPage\(\)", f"        if ({runtime}.enabled()) return;\n")
+    drawer = ui / "Adapters/DrawerLayoutAdapter.java"
+    change(drawer, "(id == nkbtnQrLogin || id == 15 || id == nkbtnFeed)",
+           "(id != 16 && id != 6 && id != 8 && id != nkbtnSessions && id != nkbtnRestartApp && id != nkbtnMainTabsCustomize && id != nkbtnBrowser && id != nkbtnArchivedChats)")
+
+
 def remove_native_transport(target):
     jni = target / "TMessagesProj/jni"
     cmake = jni / "CMakeLists.txt"
@@ -363,6 +447,7 @@ def main():
     configure_build(output)
     patch_password_login(output)
     isolate_client_services(output)
+    restrict_max_ui(output)
     shutil.copytree(ROOT / "integrations/nagram/src/main/java", output / "TMessagesProj/src/main/java", dirs_exist_ok=True)
     verify_guards(output, native_names)
     report = {"nagram_commit": lock["commit"], "network_entrypoints_guarded": len(native_names),
