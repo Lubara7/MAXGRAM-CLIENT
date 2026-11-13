@@ -126,6 +126,8 @@ def install_auth_translations(resources):
     mapping = {
         "language_title": ["Language"], "phone_title": ["YourPhone"],
         "phone_description": ["StartText"], "phone_label": ["PhoneNumber"],
+        "captcha_title": ["TgMaxCaptchaTitle"], "captcha_load_error": ["TgMaxCaptchaLoadError"],
+        "captcha_webview_update": ["TgMaxCaptchaWebViewUpdate"], "captcha_rejected": ["TgMaxCaptchaRejected"],
         "action_continue": ["Next", "Continue"], "action_sign_in": ["StartMessaging"],
         "action_cancel": ["Cancel"], "action_back": ["Back"],
         "code_title": ["SentSmsCodeTitle"], "code_label": ["Code"],
@@ -299,7 +301,7 @@ def restrict_max_ui(target):
     src = src[:pos] + f"""            if ({runtime}.enabled() && activityMode == MODE_LOGIN) {{
                 String digits = PhoneFormat.stripExceptNumbers(codeField.getText().toString())
                         + PhoneFormat.stripExceptNumbers(phoneField.getText().toString());
-                if (codeField.length() == 0 || phoneField.length() == 0 || !digits.matches("[1-9][0-9]{{7,14}}")) {{
+                if (codeField.length() == 0 || phoneField.length() == 0 || currentCountry == null || !digits.matches("[1-9][0-9]{{7,14}}")) {{
                     onFieldError(phoneOutlineView, false);
                     return;
                 }}
@@ -316,11 +318,12 @@ def restrict_max_ui(target):
                             nextPressed = false;
                             needHideProgress(false);
                             if (getParentActivity() == null || currentViewNum != VIEW_PHONE_INPUT) return;
+                            if (error != null && "MAX_CAPTCHA_CANCELLED".equals(error.text)) return;
                             if (error == null && response instanceof TLRPC.TL_auth_sentCode) {{
                                 fillNextCodeParams(params, (TLRPC.auth_SentCode) response);
                             }} else {{
                                 needShowAlert(getString(R.string.ErrorOccurred), error == null
-                                        ? getString(R.string.ErrorOccurred) : error.text);
+                                        ? getString(R.string.ErrorOccurred) : maxAuthError(error.text));
                             }}
                         }}));
                 needShowProgress(token);
@@ -360,6 +363,64 @@ def restrict_max_ui(target):
     drawer = ui / "Adapters/DrawerLayoutAdapter.java"
     change(drawer, "(id == nkbtnQrLogin || id == 15 || id == nkbtnFeed)",
            "(id != 16 && id != 6 && id != 8 && id != nkbtnSessions && id != nkbtnRestartApp && id != nkbtnMainTabsCustomize && id != nkbtnBrowser && id != nkbtnArchivedChats)")
+
+
+def configure_phone_login(target):
+    ui = target / "TMessagesProj/src/main/java/org/telegram/ui"
+    login = ui / "LoginActivity.java"
+    rows = json.loads((ROOT / "integrations/nagram/login-countries.json").read_text())
+    if len(rows) != 44 or len({item["iso"] for item in rows}) != 44:
+        raise RuntimeError("Expected the 44 supported login countries")
+    asset = target / "TMessagesProj/src/main/assets/countries.txt"
+    formats = {}
+    for line in asset.read_text().splitlines():
+        fields = line.split(";")
+        if len(fields) > 3: formats[fields[1]] = fields[3]
+    asset.write_text("\n".join(";".join([item["code"], item["iso"], item["name"],
+                     "XXX XXX XXXX" if item["code"] == "1" else formats.get(item["iso"], "")]) for item in rows) + "\n")
+    change(login, "countriesArray.add(0, countryWithCode);", "countriesArray.add(countryWithCode);")
+    change(login, "Collections.sort(countriesArray, Comparator.comparing(o -> o.name));", "")
+    change(login, 'if (!TextUtils.equals(countryWithCode.code, "FT")) {',
+           'if (!LocaleController.getLocaleStringIso639().startsWith("ru")) {')
+    source = login.read_text()
+    first = source.index("            String country = null;", source.index('open("countries.txt")'))
+    last = source.index("            if (codeField.length() == 0) {\n                setCountryButtonText(null);", first)
+    source = source[:first] + source[last:]
+    source = source.replace("country = list.get(list.size() - 1);", "country = list.get(0);")
+    login.write_text(source)
+    runtime = JAVA_PREFIX + "TgMaxRuntime"
+    add_after_opening(login, r"private void loadCountries\(\)", f"        if ({runtime}.enabled()) return;\n")
+    selector = ui / "CountrySelectActivity.java"
+    add_after_opening(selector, r"public CountryAdapter\(Context context, ArrayList<Country> exisitingCountries, boolean disableAnonymousNumbers\)", f"""            if ({runtime}.enabled()) {{
+                mContext = context;
+                ArrayList<Country> entries = new ArrayList<>();
+                if (exisitingCountries != null) entries.addAll(exisitingCountries);
+                else {{
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                            ApplicationLoader.applicationContext.getAssets().open("countries.txt"), java.nio.charset.StandardCharsets.UTF_8))) {{
+                        String line;
+                        while ((line = reader.readLine()) != null) {{
+                            String[] columns = line.split(";");
+                            Country country = new Country();
+                            country.code = columns[0]; country.shortname = columns[1]; country.name = columns[2];
+                            if (!LocaleController.getLocaleStringIso639().startsWith("ru"))
+                                country.name = LocaleController.getCountryName(country.shortname);
+                            entries.add(country);
+                        }}
+                    }} catch (Exception error) {{ throw new IllegalStateException("Missing MAX countries", error); }}
+                }}
+                countries.put("", entries);
+                sortedCountries.add("");
+                return;
+            }}
+""")
+    hooks = (ROOT / "integrations/nagram/login-hooks.java.txt").read_text()
+    add_after_opening(login, r"public class LoginActivity extends BaseFragment[^{{]*", hooks)
+    add_after_opening(login, r"public View createView\(Context context\)", f"""        {runtime}.get(currentAccount).setCaptchaHandler(maxCaptchaHandler);
+""")
+    add_after_opening(login, r"public void onFragmentDestroy\(\)", f"""        {runtime}.get(currentAccount).clearCaptchaHandler(maxCaptchaHandler);
+        if (maxCaptchaDialog != null) maxCaptchaDialog.dismiss();
+""")
 
 
 def remove_native_transport(target):
@@ -448,7 +509,10 @@ def main():
     patch_password_login(output)
     isolate_client_services(output)
     restrict_max_ui(output)
+    configure_phone_login(output)
     shutil.copytree(ROOT / "integrations/nagram/src/main/java", output / "TMessagesProj/src/main/java", dirs_exist_ok=True)
+    shutil.copytree(ROOT / "integrations/nagram/src/main/assets", output / "TMessagesProj/src/main/assets", dirs_exist_ok=True)
+    shutil.copy2(ROOT / "integrations/nagram/ui/TgMaxCaptcha.java", output / "TMessagesProj/src/main/java/io/github/lubara7/tgmax/nagram/TgMaxCaptcha.java")
     verify_guards(output, native_names)
     report = {"nagram_commit": lock["commit"], "network_entrypoints_guarded": len(native_names),
               "removed_locale_directories": removed, "native_apk_verified": False}

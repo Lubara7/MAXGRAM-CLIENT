@@ -10,7 +10,7 @@
     <string name="action_resend">Адправіць код паўторна</string>
     <string name="action_edit_phone">Змяніць нумар</string>
     <string name="phone_title">Ваш нумар тэлефона</string>
-    <string name="phone_description">Выберыце краіну і ўвядзіце нумар тэлефона для ўваходу ў MAX.</string>
+    <string name="phone_description">Праверце код краіны і ўвядзіце свой нумар тэлефона з акаўнта MAX.</string>
     <string name="phone_label">Нумар тэлефона</string>
     <string name="country_title">Краіна</string>
     <string name="country_search">Пошук краіны</string>
@@ -37,4 +37,8 @@
         <item quantity="many">Паўтор праз %1$d секунд</item>
         <item quantity="other">Паўтор праз %1$d секунды</item>
     </plurals>
+    <string name="captcha_title">Пацвердзіце, што вы чалавек</string>
+    <string name="captcha_load_error">Не ўдалося загрузіць праверку. Паспрабуйце яшчэ раз.</string>
+    <string name="captcha_webview_update">Абнавіце Android System WebView, каб прайсці праверку.</string>
+    <string name="captcha_rejected">MAX не прыняў праверку. Націсніце «Працягнуць» і прайдзіце яе яшчэ раз.</string>
 </resources>

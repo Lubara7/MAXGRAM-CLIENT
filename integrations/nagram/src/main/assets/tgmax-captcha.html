@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+html, body { width: 100%; height: 100%; margin: 0; }
+iframe { width: 100%; height: 100%; border: 0; color-scheme: light dark; }
+</style>
+</head>
+<body>
+<iframe id="challenge" title="MAX CAPTCHA" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+<script>
+(() => {
+    const config = __TGMAX_CONFIG__;
+    const frame = document.getElementById('challenge');
+    const url = new URL(config.url);
+    const origin = url.origin;
+    const languages = { ru: '0', en: '3', es: '4', fr: '16', uz: '65', be: '114' };
+    let complete = false;
+    let sensors = [];
+    const timeout = setTimeout(() => finish({ type: 'error' }), 60000);
+    function finish(message) {
+        if (complete) return;
+        complete = true;
+        clearTimeout(timeout);
+        tgmaxCaptcha.postMessage(JSON.stringify(message));
+    }
+    function sensor(eventType, data) {
+        const rect = frame.getBoundingClientRect();
+        frame.contentWindow.postMessage({
+            type: 'vk-sak-sdk', handler: 'VKCaptchaListenSensorsWebChanged',
+            params: { eventType, data, coords: { left: rect.left + scrollX, top: rect.top + scrollY } }
+        }, origin);
+    }
+    window.addEventListener('message', event => {
+        if (event.source !== frame.contentWindow || event.origin !== origin || event.data?.type !== 'vk-sak-sdk') return;
+        const message = event.data;
+        switch (message.handler) {
+            case 'common: load':
+                clearTimeout(timeout);
+                break;
+            case 'VKCaptchaGetResult':
+                if (typeof message.params?.token === 'string' && message.params.token.length > 0)
+                    finish({ type: 'token', token: message.params.token });
+                else finish({ type: 'error' });
+                break;
+            case 'VKCaptchaCloseCaptcha':
+            case 'common: close':
+                finish({ type: 'cancel' });
+                break;
+            case 'common: error':
+                finish({ type: 'error' });
+                break;
+            case 'VKCaptchaListenSensorsStart':
+                sensors = Array.isArray(message.params?.bridge_sensors_list) ? message.params.bridge_sensors_list : [];
+                if (sensors.length) sensor('init');
+                break;
+            case 'VKCaptchaListenSensorsStop':
+                sensors = [];
+                break;
+        }
+    });
+    for (const name of ['mouseenter', 'mouseleave', 'mousemove']) {
+        document.addEventListener(name, event => {
+            if (event.isTrusted && sensors.includes('cursor')) sensor('mouseChange', { pageX: event.pageX, pageY: event.pageY });
+        });
+    }
+    for (const name of ['touchstart', 'touchmove']) {
+        document.addEventListener(name, event => {
+            const touch = event.touches[0];
+            if (event.isTrusted && touch && sensors.includes('taps')) sensor('touchChange', { pageX: touch.pageX, pageY: touch.pageY });
+        }, { passive: true });
+    }
+    url.searchParams.set('origin', 'https://web.max.ru');
+    url.searchParams.set('variant', 'block');
+    url.searchParams.set('scheme', config.dark ? 'dark' : 'light');
+    url.searchParams.set('lang_id', languages[config.language] || '3');
+    url.searchParams.set('autofocus', '1');
+    document.documentElement.style.background = config.dark ? '#17212b' : '#ffffff';
+    frame.src = url.href;
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+import argparse
+import json
+from pathlib import Path
+import xml.etree.ElementTree as ET
+
+ROOT = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser()
+parser.add_argument('--client', type=Path, default=ROOT / 'build/nagram-client')
+client = parser.parse_args().client
+expected = json.loads((ROOT / 'integrations/nagram/login-countries.json').read_text())
+actual = [line.split(';') for line in (client / 'TMessagesProj/src/main/assets/countries.txt').read_text().splitlines()]
+assert len(expected) == len(actual) == 44
+assert [(row[1], row[0], row[2]) for row in actual] == [(row['iso'], row['code'], row['name']) for row in expected]
+assert [row[1] for row in actual if row[0] == '7'] == ['RU', 'KZ']
+assert [row[1] for row in actual if row[0] == '1'] == ['GD', 'KN']
+resources = client / 'TMessagesProj/src/main/res'
+text = {s.get('name'): s.text for s in ET.parse(resources / 'values-ru/strings.xml').findall('string')}
+assert text['StartText'] == 'Проверьте код страны и введите свой номер телефона из аккаунта MAX.'
+source = (client / 'TMessagesProj/src/main/java/org/telegram/ui/CountrySelectActivity.java').read_text()
+assert 'countries.put("", entries);' in source
+assert source.index('countries.put("", entries);') < source.index('Collections.sort(sortedCountries')
+login = (client / 'TMessagesProj/src/main/java/org/telegram/ui/LoginActivity.java').read_text()
+assert 'setCaptchaHandler(maxCaptchaHandler)' in login
+assert 'clearCaptchaHandler(maxCaptchaHandler)' in login
+assert 'TL_help_getNearestDc req' not in login
+assert (client / 'TMessagesProj/src/main/assets/tgmax-captcha.html').is_file()
+print('44 ordered countries, shared codes, Russian login copy and CAPTCHA lifecycle checked')

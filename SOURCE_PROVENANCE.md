@@ -13,3 +13,6 @@ TG-MAX Ultimate uses NagramXF as its Android UI source and ports selected MAX cl
 Nagram's own native dependencies and their licenses are retained by the prepared checkout. Native submodule revisions are fixed by Nagram's gitlinks. Source packages accompanying a release must contain the modified checkout and initialized dependencies, with notices retained. Root GPL text is included as LICENSE.
 
 MAX protocol behavior may change independently of this repository. Operation names or opcode tables alone are not evidence of live-account support; release notes distinguish source tests, APK compilation and device/account validation.
+
+
+The phone authentication adapter follows the official MAX web request flow inspected on 2026-11-13 at https://web.max.ru/. The official bundles `B8Wt1iAx.js` and `0.CO972B4e.js` use opcode 224 with source auth and identifier, then opcode 17 with captchaToken. The embedded VK CAPTCHA sends vk-sak-sdk messages including VKCaptchaGetResult. The TG-MAX bridge validates iframe source and origin and forwards the token from the user-completed check. It implements the protocol without bundling the official client code.

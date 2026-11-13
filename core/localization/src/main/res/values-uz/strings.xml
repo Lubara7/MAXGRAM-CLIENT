@@ -10,7 +10,7 @@
     <string name="action_resend">Kodni qayta yuborish</string>
     <string name="action_edit_phone">Raqamni o‘zgartirish</string>
     <string name="phone_title">Telefon raqamingiz</string>
-    <string name="phone_description">MAX hisobiga kirish uchun mamlakatingizni tanlang va telefon raqamingizni kiriting.</string>
+    <string name="phone_description">Mamlakat kodini tekshiring va MAX hisobingizdagi telefon raqamini kiriting.</string>
     <string name="phone_label">Telefon raqami</string>
     <string name="country_title">Mamlakat</string>
     <string name="country_search">Mamlakatni qidirish</string>
@@ -35,4 +35,8 @@
         <item quantity="one">%1$d soniyadan keyin qayta urining</item>
         <item quantity="other">%1$d soniyadan keyin qayta urining</item>
     </plurals>
+    <string name="captcha_title">Inson ekaningizni tasdiqlang</string>
+    <string name="captcha_load_error">Tekshiruv yuklanmadi. Qayta urinib ko‘ring.</string>
+    <string name="captcha_webview_update">Tekshiruvdan o‘tish uchun Android System WebView ilovasini yangilang.</string>
+    <string name="captcha_rejected">MAX tekshiruvni qabul qilmadi. Davom etish tugmasini bosib, tekshiruvni qayta bajaring.</string>
 </resources>
