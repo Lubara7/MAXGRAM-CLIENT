@@ -34,6 +34,13 @@ def main():
     args = parser.parse_args()
     client, output = args.client.resolve(), args.output.resolve()
     release = json.loads((ROOT / 'release.json').read_text())
+    graphs = list((client / 'TMessagesProj/.cxx').glob('Debug/*/arm64-v8a/build.ninja'))
+    if len(graphs) != 1:
+        raise SystemExit('Expected one ARM64 debug native build graph')
+    graph = graphs[0].read_text()
+    if 'tgnet/NativeByteBuffer.cpp' not in graph or re.search(
+            r'tgnet/(?:Connections?Manager|Connection(?:Socket|Session)?|Handshake|MTProtoScheme|Datacenter|TLSHello)\.cpp', graph):
+        raise SystemExit('Unexpected native transport sources in the compiled APK build')
     metadata = client / 'TMessagesProj/build/outputs/apk/normal/debug/output-metadata.json'
     data = json.loads(metadata.read_text())
     if data['applicationId'] != 'io.github.lubara7.tgmax':

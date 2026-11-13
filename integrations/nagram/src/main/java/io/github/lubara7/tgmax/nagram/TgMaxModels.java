@@ -190,6 +190,7 @@ final class TgMaxModels {
     synchronized TLRPC.messages_Messages history(long rawChatId, Map<String, Object> raw) {
         TLRPC.TL_messages_messages response = new TLRPC.TL_messages_messages();
         List<Map<String, Object>> messages = Maps.objects(raw.get("messages"));
+        ids.reserveHistory(rawChatId, messages);
         messages.sort((a, b) -> {
             int comparison = Long.compare(Maps.number(a.get("time")), Maps.number(b.get("time")));
             return comparison != 0 ? comparison : Long.compare(Maps.number(a.get("id")), Maps.number(b.get("id")));

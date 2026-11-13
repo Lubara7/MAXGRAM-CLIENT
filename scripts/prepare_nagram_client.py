@@ -278,6 +278,54 @@ def isolate_client_services(target):
                       f"        if ({runtime}.enabled() && (id == nkbtnQrLogin || id == 15 || id == nkbtnFeed)) return null;\n")
 
 
+def remove_native_transport(target):
+    jni = target / "TMessagesProj/jni"
+    cmake = jni / "CMakeLists.txt"
+    source = cmake.read_text()
+    start = source.index("add_library(tgnet STATIC")
+    end = source.index("target_compile_options(tgnet", start)
+    source = source[:start] + """add_library(tgmax_buffers STATIC
+        openssl/aes_ige.c
+        tgnet/BuffersStorage.cpp
+        tgnet/ByteArray.cpp
+        tgnet/FileLog.cpp
+        tgnet/NativeByteBuffer.cpp)
+""" + source[end:]
+    source = re.sub(r"\btgnet(?= PUBLIC| PROPERTIES|\n)", "tgmax_buffers", source)
+    cmake.write_text(source.replace("libtgnet.a", "libtgmax_buffers.a"))
+    change(cmake, "        tests.cpp\n", "")
+
+    bridge = jni / "TgNetWrapper.cpp"
+    original = bridge.read_text()
+    buffers = original[original.index("jlong getFreeBuffer("):original.index("jlong getCurrentTimeMillis(")]
+    bridge.write_text("""#include <jni.h>
+#include "tgnet/BuffersStorage.h"
+#include "tgnet/NativeByteBuffer.h"
+
+JavaVM *javaVm = nullptr;
+jclass jclass_ByteBuffer = nullptr;
+jmethodID jclass_ByteBuffer_allocateDirect = nullptr;
+
+""" + buffers + """
+extern "C" int registerNativeBuffers(JavaVM *vm, JNIEnv *env) {
+    javaVm = vm;
+    jclass clazz = env->FindClass(NativeByteBufferClassPathName);
+    if (clazz == nullptr) return JNI_FALSE;
+    jint result = env->RegisterNatives(clazz, NativeByteBufferMethods,
+            sizeof(NativeByteBufferMethods) / sizeof(NativeByteBufferMethods[0]));
+    env->DeleteLocalRef(clazz);
+    return result == JNI_OK ? JNI_TRUE : JNI_FALSE;
+}
+""")
+    change(jni / "jni.c", "registerNativeTgNetFunctions", "registerNativeBuffers", 2)
+    manager = target / "TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java"
+    change(manager, "public static native void native_setJava(boolean useJavaByteBuffers);",
+           "public static void native_setJava(boolean useJavaByteBuffers) {}")
+    change(manager, "public static native boolean native_isGoodPrime(byte[] prime, int g);",
+           "public static boolean native_isGoodPrime(byte[] prime, int g) { return false; }")
+    manager.write_text(re.sub(r"(?m)^\s*public static native [^;\n]+;", "", manager.read_text()))
+
+
 def verify_guards(target, native_names):
     root = target / "TMessagesProj/src"
     for path in root.rglob("*"):
@@ -310,6 +358,7 @@ def main():
     subprocess.run(["git", "clone", "--no-hardlinks", "--no-checkout", str(source), str(output)], check=True)
     subprocess.run(["git", "checkout", "--detach", lock["commit"]], cwd=output, check=True)
     native_names = guard_mtproto(output)
+    remove_native_transport(output)
     removed = restrict_languages(output)
     configure_build(output)
     patch_password_login(output)
