@@ -1,57 +1,50 @@
-# TG-MAX Ultimate
+<div align="center">
 
-Android-клиент MAX на основе интерфейса [NagramXF](https://github.com/Keeperorowner/NagramXF), с клиентским протоколом MAX по [Komet](https://github.com/KometTeam/Komet).
+# MAXGRAM CLIENT
 
-**Статус: экспериментальная альфа.** Перенесён базовый транспорт MAX и начальный слой совместимости с Nagram. Полная замена всех подсистем ещё не завершена. Успешная сборка APK не означает проверенный вход на реальном аккаунте.
+**The MAX messenger. The Telegram experience.**
 
-## Основа
+Unofficial Android client built on [NagramXF](https://github.com/Keeperorowner/NagramXF), with a native MAX backend based on [Komet](https://github.com/KometTeam/Komet).
 
-- Настоящие Java/Kotlin UI-компоненты Nagram: экраны входа, список чатов, пузыри, профили и настройки.
-- Отдельный Java backend MAX: бинарные WebSocket-пакеты, MessagePack, LZ4, handshake, корреляция ответов и push.
-- Начальные операции: телефон/код/пароль MAX, загрузка диалогов и истории, текст, reply/edit/delete/read, известные каналы.
-- Сессия шифруется AES-GCM ключом Android Keystore. Временные коды, пароль и challenge не сохраняются в login preferences.
-- Транспорт MTProto исключён из графа нативной сборки, Java-вызовы ConnectionsManager направляются в адаптер MAX; неподдержанные операции завершаются ошибкой без перехода в Telegram.
-- Разрешены языки `ru`, `en`, `es`, `uz`, `pt`, `pt-BR`, `fr`, `be`; auth-строки включены для всех вариантов. Полный перевод большого интерфейса Nagram ещё требует покрытия: непереведённые строки используют upstream English.
-- QR-вход отключён. Готового сервера-посредника TG-MAX нет.
+[Download APK](https://github.com/Lubara7/MAXGRAM-CLIENT/releases) · [Source code](https://github.com/Lubara7/MAXGRAM-CLIENT) · [Build guide](docs/nagram-migration.md)
 
-## Ограничения альфы
+</div>
 
-Не реализованы: исходящий звонок для подтверждения входа, восстановление через почту, медиа/uploads, стикеры, истории, аудио/видеозвонки, MAX push в фоне, полные серверные настройки/приватность/папки и каталог рекомендаций. В имеющихся экранах Nagram остаются действия, для которых MAX-адаптер возвращает `MAX_UNSUPPORTED_*`. Полного соответствия 45 экранам MAX альфа пока не достигает.
+## Android client
 
-На аккаунте, требующем неподдержанную проверку входа, авторизация не завершается. Рабочий код `12345` относится только к отдельному историческому auth-harness и никогда не используется в Nagram/MAX backend.
+Telegram-style navigation, chat list and message bubbles, connected to MAX. Phone-number sign-in supports CAPTCHA, a verification code, an account password and server-selected outgoing-call verification. The login screen includes language selection, help and MAX legal documents.
 
-## Подготовка настоящего клиента
+**Languages:** Русский · English · Español · Português (Brasil) · O‘zbek · Français · Беларуская.
+
+**Android 8.1+ · ARM64 · Experimental alpha.** Live-account compatibility is still being tested. Media uploads, stories, messenger voice/video calls and background MAX push are not implemented. Login translations are bundled; the wider Nagram interface still has English fallback strings. See [release notes](docs/release-notes.md).
+
+## Build from source
+
+Requires JDK 21, Android SDK 36, Build Tools 36.0.0, NDK 27.2.12479018 and CMake 3.31.6.
 
 ```bash
+git clone https://github.com/Lubara7/MAXGRAM-CLIENT.git
+cd MAXGRAM-CLIENT
 git submodule update --init --depth 1 upstream/nagramxf upstream/komet
 python3 scripts/prepare_nagram_client.py
-python3 scripts/init_nagram_dependencies.py build/nagram-client
-```
-
-Результат — `build/nagram-client`, отдельный checkout Nagram с интеграцией. Исходные submodules не изменяются. Скрипт отказывается перезаписывать уже существующий output; для повторной подготовки используйте новый `--output`.
-
-Нужны JDK 21, Android SDK 36, Build Tools 36.0.0, NDK 27.2.12479018 и CMake 3.31.6. Для 64-битного ARM:
-
-```bash
+python3 scripts/init_nagram_dependencies.py
 cd build/nagram-client
-NATIVE_TARGET=arm64-v8a ./gradlew :TMessagesProj:assembleNormalDebug
+NATIVE_TARGET=arm64-v8a ./gradlew :tgmax-backend:test :TMessagesProj:assembleNormalDebug
 ```
 
-Минимальная версия Android у закреплённого Nagram — API 27 (Android 8.1). Debug-сборка подписывается тестовым Android debug key. Ключ релизной подписи не включён в репозиторий.
+The prepared checkout uses real Nagram UI components and a Java MAX protocol adapter. MTProto transport is excluded from the native build. The Android application ID stays `io.github.lubara7.tgmax`, so updates preserve the installed application. CI reuses the alpha signing key.
 
-## Проверки backend и адаптера
+## Development
 
-В корне проекта нужны JDK 17 и SDK 36:
+- [Architecture and integration](docs/nagram-migration.md)
+- [Authentication research and screen mapping](docs/auth-research.md)
+- [Source provenance](SOURCE_PROVENANCE.md)
+- [Release notes and limitations](docs/release-notes.md)
 
-```bash
-./gradlew :max-backend:test :max-backend:writeAdapterClasspath
-python3 scripts/check_nagram_api.py
-```
+Backend tests cover binary frames, compression, CAPTCHA ordering, cancellation, OTP, call verification, sessions and stable message identifiers. CI also builds the APK, checks its signature and opens the published build in an Android emulator.
 
-`check_nagram_api.py` проверяет типы используемых полей/классов по закреплённым исходникам Nagram. Это отдельная быстрая проверка; она не заменяет полную компиляцию Android UI или сквозные тесты на устройстве.
+## License
 
-`tools-auth-harness`, `core/*`, `feature/auth` сохраняют прежний отдельный Compose стенд авторизации под другим applicationId. Его APK не является клиентом Nagram и не публикуется как TG-MAX.
+Our integration code is distributed under [GNU GPL v3](LICENSE). Telegram, NagramXF and Komet notices remain in their source files. MAX artwork extracted from the user-supplied application retains its original ownership; provenance and hashes are recorded in [max-apk-assets.json](integrations/nagram/max-apk-assets.json).
 
-## Документация
-
-[Карта 45 скриншотов и целевая архитектура](docs/screen-map.md), [интеграция Nagram](docs/nagram-migration.md), [происхождение исходников](SOURCE_PROVENANCE.md).
+MAXGRAM CLIENT is an independent project and is not affiliated with Telegram or MAX.

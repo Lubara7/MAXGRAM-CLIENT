@@ -1,4 +1,4 @@
-    private AlertDialog maxCaptchaDialog;
+    private android.app.Dialog maxCaptchaDialog;
     private final java.util.function.Function<String, java.util.concurrent.CompletableFuture<String>> maxCaptchaHandler = this::showMaxCaptcha;
 
     private String maxAuthError(String code) {
@@ -19,10 +19,10 @@
             io.github.lubara7.tgmax.nagram.TgMaxCaptcha captcha = new io.github.lubara7.tgmax.nagram.TgMaxCaptcha(
                     getParentActivity(), link, LocaleController.getLocaleStringIso639(), Theme.isCurrentThemeDark());
             captcha.setMinimumHeight(Math.min(AndroidUtilities.dp(420), AndroidUtilities.displaySize.y * 2 / 3));
-            AlertDialog dialog = new AlertDialog.Builder(getParentActivity())
-                    .setTitle(getString(R.string.TgMaxCaptchaTitle))
-                    .setView(captcha)
-                    .setNegativeButton(getString(R.string.Cancel), (d, which) -> captcha.close())
+            AndroidUtilities.hideKeyboard(fragmentView);
+            org.telegram.ui.ActionBar.BottomSheet dialog = new org.telegram.ui.ActionBar.BottomSheet.Builder(getParentActivity())
+                    .setTitle(getString(R.string.TgMaxCaptchaTitle), true)
+                    .setCustomView(captcha)
                     .create();
             maxCaptchaDialog = dialog;
             result.whenComplete((token, failure) -> AndroidUtilities.runOnUIThread(() -> {
@@ -39,3 +39,99 @@
         return result;
     }
 
+    private ImageView maxLanguageButton;
+    private TextView maxPolicy;
+
+    private void setupMaxLoginControls(Context context) {
+        maxLanguageButton = new ImageView(context);
+        maxLanguageButton.setImageResource(R.drawable.maxgram_language);
+        maxLanguageButton.setColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        maxLanguageButton.setContentDescription(getString(R.string.Language));
+        maxLanguageButton.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector)));
+        maxLanguageButton.setOnClickListener(v -> showMaxLanguages());
+        sizeNotifierFrameLayout.addView(maxLanguageButton, LayoutHelper.createFrame(32, 32, Gravity.RIGHT | Gravity.TOP, 16, 16, 64, 16));
+        maxPolicy = new TextView(context);
+        maxPolicy.setTextSize(12);
+        maxPolicy.setGravity(Gravity.CENTER);
+        maxPolicy.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        maxPolicy.setLinkTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText));
+        maxPolicy.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+        String privacy = "<a href=\"https://legal.max.ru/pp\">" + getString(R.string.TgMaxPrivacy) + "</a>";
+        String terms = "<a href=\"https://legal.max.ru/ps\">" + getString(R.string.TgMaxTerms) + "</a>";
+        String recommendations = "<a href=\"https://legal.max.ru/recsysrules\">" + getString(R.string.TgMaxRecommendations) + "</a>";
+        maxPolicy.setText(android.text.Html.fromHtml(LocaleController.formatString(R.string.TgMaxLegalIntro,
+                privacy, terms, recommendations), android.text.Html.FROM_HTML_MODE_LEGACY));
+        sizeNotifierFrameLayout.addView(maxPolicy, LayoutHelper.createFrame(-1, -2, Gravity.BOTTOM, 24, 0, 24, 8));
+        updateMaxLoginControls();
+    }
+
+    private void updateMaxLoginControls() {
+        int visibility = activityMode == MODE_LOGIN && currentViewNum == VIEW_PHONE_INPUT ? View.VISIBLE : View.GONE;
+        if (maxLanguageButton != null) maxLanguageButton.setVisibility(visibility);
+        if (maxPolicy != null) maxPolicy.setVisibility(visibility);
+    }
+
+    private void layoutMaxLoginControls(int keyboardOffset, int statusBarHeight) {
+        if (maxLanguageButton != null) {
+            ((MarginLayoutParams) maxLanguageButton.getLayoutParams()).topMargin = dp(16) + statusBarHeight;
+        }
+        if (maxPolicy != null && maxPolicy.getVisibility() == View.VISIBLE) {
+            ((MarginLayoutParams) maxPolicy.getLayoutParams()).bottomMargin = dp(8) + keyboardOffset;
+            ((MarginLayoutParams) floatingButton.getLayoutParams()).bottomMargin += maxPolicy.getMeasuredHeight() + dp(16);
+        }
+    }
+
+    private void showMaxLanguages() {
+        if (getParentActivity() == null) return;
+        Context context = getParentActivity();
+        LinearLayout list = new LinearLayout(context);
+        list.setOrientation(LinearLayout.VERTICAL);
+        ScrollView scroll = new ScrollView(context);
+        scroll.addView(list);
+        org.telegram.ui.ActionBar.BottomSheet sheet = new org.telegram.ui.ActionBar.BottomSheet.Builder(context)
+                .setTitle(getString(R.string.TgMaxLanguageTitle), true).setCustomView(scroll).create();
+        for (LocaleController.LocaleInfo language : LocaleController.getInstance().languages) {
+            org.telegram.ui.Cells.LanguageCell cell = new org.telegram.ui.Cells.LanguageCell(context);
+            cell.setLanguage(language, null, false);
+            cell.textView2.setText(io.github.lubara7.tgmax.nagram.TgMaxLocales.localizedName(language));
+            cell.setLanguageSelected(LocaleController.getInstance().getCurrentLocaleInfo() != null && language.shortName.equals(LocaleController.getInstance().getCurrentLocaleInfo().shortName), false);
+            list.addView(cell, LayoutHelper.createLinear(-1, 60));
+            cell.setOnClickListener(v -> {
+                PhoneView old = (PhoneView) views[VIEW_PHONE_INPUT];
+                String number = old.phoneField.getText().toString();
+                String country = old.currentCountry == null ? "" : old.currentCountry.shortname;
+                String dialCode = old.codeField.getText().toString();
+                sheet.dismiss();
+                LocaleController.getInstance().applyLanguage(language, true, false, currentAccount);
+                if (parentLayout != null) parentLayout.rebuildAllFragmentViews(true, true);
+                PhoneView phoneView = (PhoneView) views[VIEW_PHONE_INPUT];
+                for (CountrySelectActivity.Country entry : phoneView.countriesArray) {
+                    if (entry.shortname.equals(country)) { phoneView.selectCountry(entry); break; }
+                }
+                if (country.isEmpty()) phoneView.codeField.setText(dialCode);
+                phoneView.phoneField.setText(number);
+                phoneView.phoneField.setSelection(phoneView.phoneField.length());
+            });
+        }
+        showDialog(sheet);
+    }
+
+    private void handleMaxVerification(Bundle params, TLObject result, Throwable failure) {
+        if (getParentActivity() == null) return;
+        if (failure != null) {
+            if (io.github.lubara7.tgmax.nagram.TgMaxRuntime.get(currentAccount).needsPassword()) {
+                Bundle password = new Bundle();
+                password.putBoolean("max_password", true);
+                setPage(VIEW_PASSWORD, true, password, false);
+            } else {
+                String error = io.github.lubara7.tgmax.nagram.TgMaxRuntime.errorText(failure);
+                if (!error.equals("MAX_CAPTCHA_CANCELLED")) needShowAlert(getString(R.string.ErrorOccurred), maxAuthError(error));
+            }
+        } else if (result instanceof TLRPC.auth_SentCode) {
+            fillNextCodeParams(params, (TLRPC.auth_SentCode) result);
+        } else if (result instanceof TLRPC.TL_auth_authorizationSignUpRequired) {
+            setPage(VIEW_REGISTER, true, params, false);
+        } else if (result instanceof TLRPC.TL_auth_authorization) {
+            onAuthSuccess((TLRPC.TL_auth_authorization) result);
+        }
+    }

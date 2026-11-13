@@ -89,5 +89,5 @@ jobs:
             gh release upload "$tag" dist/*.apk dist/SHA256SUMS.txt dist/signature-verification.txt dist/*-source.tar.gz --clobber
             gh release edit "$tag" --notes-file docs/release-notes.md
           else
-            gh release create "$tag" dist/*.apk dist/SHA256SUMS.txt dist/signature-verification.txt dist/*-source.tar.gz --target "$GITHUB_SHA" --prerelease --title "TG-MAX Ultimate $tag" --notes-file docs/release-notes.md
+            gh release create "$tag" dist/*.apk dist/SHA256SUMS.txt dist/signature-verification.txt dist/*-source.tar.gz --target "$GITHUB_SHA" --prerelease --title "MAXGRAM CLIENT $tag" --notes-file docs/release-notes.md
           fi

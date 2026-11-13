@@ -41,6 +41,15 @@ jobs:
           assert hashlib.sha256(certificate).hexdigest() == expected
           print('Published APK matches the saved alpha signing key')
           PYCODE
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools build-tools;36.0.0'
+          log-accepted-android-sdk-licenses: false
+      - name: Prepare Android protocol fixture check
+        run: |
+          mkdir -p codec-classes
+          javac -source 8 -target 8 -d codec-classes scripts/CodecDeviceSmoke.java
+          "$ANDROID_HOME/build-tools/36.0.0/d8" --min-api 27 --output codec-smoke.zip codec-classes/CodecDeviceSmoke.class
       - name: Allow emulator hardware acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -53,6 +62,9 @@ jobs:
           pkg=io.github.lubara7.tgmax
           adb shell getprop ro.product.cpu.abilist | grep -F arm64-v8a
           adb install -g ./*.apk
+          adb push ./*.apk /data/local/tmp/maxgram.apk
+          adb push codec-smoke.zip /data/local/tmp/codec-smoke.zip
+          adb shell 'CLASSPATH=/data/local/tmp/maxgram.apk:/data/local/tmp/codec-smoke.zip app_process /data/local/tmp CodecDeviceSmoke'
           adb shell input keyevent KEYCODE_WAKEUP
           adb shell wm dismiss-keyguard
           activity=$(adb shell cmd package resolve-activity --brief "$pkg" | tail -n1 | tr -d '\r')
@@ -72,7 +84,10 @@ jobs:
           name: phone-login-ui
           path: |
             login.xml
-            login.png
+            login*.png
+            languages.png
+            languages.xml
+            localized-login.xml
             login-country.xml
             countries.xml
             countries.png

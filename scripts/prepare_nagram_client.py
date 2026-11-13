@@ -99,6 +99,8 @@ def restrict_languages(target):
     change(controller, "        systemDefaultLocale = Locale.getDefault();", f"        {helper}.install(this);\n        systemDefaultLocale = Locale.getDefault();")
     change(controller, "currentInfo = getLanguageFromDict(systemDefaultLocale.getLanguage());",
            f"currentInfo = getLanguageFromDict({helper}.code(systemDefaultLocale.toLanguageTag()));")
+    change(controller, "currentInfo = getLanguageFromDict(lang);",
+           f"currentInfo = getLanguageFromDict({helper}.code(lang));")
     add_after_opening(controller, r"public void loadRemoteLanguages\(final int currentAccount, boolean applyCurrent\)",
                       f"        if ({JAVA_PREFIX}TgMaxRuntime.enabled()) {{ {helper}.install(this); return; }}\n")
     add_after_opening(controller, r"private void loadOtherLanguages\(\)",
@@ -124,8 +126,9 @@ def restrict_languages(target):
 
 def install_auth_translations(resources):
     mapping = {
-        "language_title": ["Language"], "phone_title": ["YourPhone"],
+        "language_title": ["Language"], "phone_title": ["YourPhone", "YourNumber"],
         "phone_description": ["StartText"], "phone_label": ["PhoneNumber"],
+        "country_title": ["Country"], "country_search": ["SearchCountry"],
         "captcha_title": ["TgMaxCaptchaTitle"], "captcha_load_error": ["TgMaxCaptchaLoadError"],
         "captcha_webview_update": ["TgMaxCaptchaWebViewUpdate"], "captcha_rejected": ["TgMaxCaptchaRejected"],
         "action_continue": ["Next", "Continue"], "action_sign_in": ["StartMessaging"],
@@ -137,16 +140,18 @@ def install_auth_translations(resources):
         "error_unknown": ["ErrorOccurred"], "action_sign_out": ["LogOut"],
     }
     names = {"values": "English", "values-ru": "Русский", "values-es": "Español",
-             "values-uz": "O‘zbekcha", "values-pt": "Português (Portugal)",
+             "values-uz": "O‘zbek", "values-pt": "Português (Portugal)",
              "values-pt-rBR": "Português (Brasil)", "values-fr": "Français", "values-be": "Беларуская"}
     navigation = json.loads((ROOT / "integrations/nagram/navigation-strings.json").read_text())
+    auth = json.loads((ROOT / "integrations/nagram/auth-strings.json").read_text())
     for qualifier, native_name in names.items():
         source = ROOT / "core/localization/src/main/res" / qualifier / "strings.xml"
         root = ET.parse(source).getroot()
         strings = {item.attrib["name"]: "".join(item.itertext()) for item in root.findall("string")}
         translations = {key: strings[name] for name, keys in mapping.items() for key in keys}
         translations.update(navigation[qualifier])
-        translations.update(AppName="TG-MAX Ultimate", LanguageName=native_name)
+        translations.update(auth.get(qualifier, auth["values-pt-rBR"] if qualifier == "values-pt" else {}))
+        translations.update(AppName="MAXGRAM CLIENT", AppNameBeta="MAXGRAM CLIENT", LanguageName=native_name)
         destination = resources / qualifier / "strings.xml"
         destination.parent.mkdir(parents=True, exist_ok=True)
         text = destination.read_text() if destination.exists() else '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
@@ -202,7 +207,7 @@ def configure_build(target):
     manifest.write_text(text)
     values = target / "TMessagesProj/src/main/res/values/strings.xml"
     text = values.read_text()
-    text = re.sub(r'(<string name="AppName"[^>]*>).*?(</string>)', r'\g<1>TG-MAX Ultimate\2', text)
+    text = re.sub(r'(<string name="AppName"[^>]*>).*?(</string>)', r'\g<1>MAXGRAM CLIENT\2', text)
     values.write_text(text)
 
 
@@ -285,12 +290,15 @@ def restrict_max_ui(target):
     ui = java / "ui"
     phone = ui / "LoginActivity.java"
     src = phone.read_text()
-    start = src.index("        moreButtonView.addSubItem(0,")
+    start = src.index("        moreButtonView.setIcon(R.drawable.ic_ab_other);")
     end = src.index("        sizeNotifierFrameLayout.addView(moreButtonView", start)
-    src = src[:start] + "        moreButtonView.setVisibility(View.GONE);\n" + src[end:]
+    src = src[:start] + """        moreButtonView.setIcon(R.drawable.maxgram_help);
+        moreButtonView.setContentDescription(getString(R.string.TgMaxHelp));
+        moreButtonView.setOnClickListener(view -> org.telegram.messenger.browser.Browser.openUrl(getParentActivity(), "https://max.ru/support"));
+""" + src[end:]
     phone.write_text(src)
     change(phone, "moreButtonView.setVisibility(activityMode == MODE_LOGIN && currentViewNum == VIEW_PHONE_INPUT ? View.VISIBLE : View.GONE);",
-           "moreButtonView.setVisibility(View.GONE);", 3)
+           "moreButtonView.setVisibility(activityMode == MODE_LOGIN && currentViewNum == VIEW_PHONE_INPUT ? View.VISIBLE : View.GONE); updateMaxLoginControls();", 3)
     runtime = JAVA_PREFIX + "TgMaxRuntime"
     add_after_opening(phone, r"public void fillNumber\(\)", f"        if ({runtime}.enabled()) return;\n")
     add_after_opening(phone, r"public void setPage\(@ViewNumber int page, boolean animated, Bundle params, boolean back\)",
@@ -420,6 +428,18 @@ def configure_phone_login(target):
     add_after_opening(login, r"public class LoginActivity extends BaseFragment[^{{]*", hooks)
     add_after_opening(login, r"public View createView\(Context context\)", f"""        {runtime}.get(currentAccount).setCaptchaHandler(maxCaptchaHandler);
 """)
+    change(login, '        moreButtonView = new ActionBarMenuItem(', '        setupMaxLoginControls(context);\n        moreButtonView = new ActionBarMenuItem(')
+    change(login, '                super.onMeasure(widthMeasureSpec, heightMeasureSpec);\n            }\n        };\n        sizeNotifierFrameLayout.setDelegate',
+           '                layoutMaxLoginControls(keyboardOffset, statusBarHeight);\n                super.onMeasure(widthMeasureSpec, heightMeasureSpec);\n            }\n        };\n        sizeNotifierFrameLayout.setDelegate')
+    add_after_opening(login, r"private void fillNextCodeParams\(Bundle params, TLRPC.auth_SentCode res, boolean animate\)",
+        f"""        if (res instanceof {runtime}.CallSentCode) {{
+            showDoneButton(false, true);
+            AndroidUtilities.hideKeyboard(fragmentView);
+            presentFragment(new {JAVA_PREFIX}TgMaxCallActivity(currentAccount, params.getString("ephone", ""),
+                    (({runtime}.CallSentCode) res).call, (result, failure) -> handleMaxVerification(params, result, failure)));
+            return;
+        }}
+""")
     add_after_opening(login, r"public void onFragmentDestroy\(\)", f"""        {runtime}.get(currentAccount).clearCaptchaHandler(maxCaptchaHandler);
         if (maxCaptchaDialog != null) maxCaptchaDialog.dismiss();
 """)
@@ -488,6 +508,24 @@ def verify_guards(target, native_names):
                 raise RuntimeError(f"Unprotected native call in {path}")
 
 
+def install_max_assets(target):
+    import base64
+    import gzip
+    resources = target / "TMessagesProj/src/main/res"
+    source = ROOT / "integrations/nagram/resources"
+    shutil.copytree(source, resources, dirs_exist_ok=True)
+    for path in resources.rglob("*.b64"):
+        path.with_suffix("").write_bytes(base64.b64decode(path.read_text()))
+        path.unlink()
+    for path in resources.rglob("*.json.gz"):
+        path.with_suffix("").write_bytes(gzip.decompress(path.read_bytes()))
+        path.unlink()
+    manifest = target / "TMessagesProj/src/main/AndroidManifest.xml"
+    text = re.sub(r'android:(icon|roundIcon)="@mipmap/[^"]+"',
+                  lambda m: 'android:' + m[1] + '="@mipmap/maxgram_launcher"', manifest.read_text())
+    manifest.write_text(text)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=Path, default=ROOT / "upstream/nagramxf")
@@ -514,12 +552,14 @@ def main():
     configure_phone_login(output)
     shutil.copytree(ROOT / "integrations/nagram/src/main/java", output / "TMessagesProj/src/main/java", dirs_exist_ok=True)
     shutil.copytree(ROOT / "integrations/nagram/src/main/assets", output / "TMessagesProj/src/main/assets", dirs_exist_ok=True)
-    shutil.copy2(ROOT / "integrations/nagram/ui/TgMaxCaptcha.java", output / "TMessagesProj/src/main/java/io/github/lubara7/tgmax/nagram/TgMaxCaptcha.java")
+    for helper in (ROOT / "integrations/nagram/ui").glob("*.java"):
+        shutil.copy2(helper, output / "TMessagesProj/src/main/java/io/github/lubara7/tgmax/nagram" / helper.name)
+    install_max_assets(output)
     verify_guards(output, native_names)
     report = {"nagram_commit": lock["commit"], "network_entrypoints_guarded": len(native_names),
               "removed_locale_directories": removed, "native_apk_verified": False}
     (output / "TGMAX_CHANGES.json").write_text(json.dumps(report, indent=2) + "\n")
-    (output / "TGMAX_CHANGES.md").write_text("TG-MAX Ultimate modifies this NagramXF checkout to use the Komet-derived MAX backend.\nSee the parent project's SOURCE_PROVENANCE.md and docs/nagram-migration.md.\nUpstream copyright and GPL notices are retained.\n")
+    (output / "TGMAX_CHANGES.md").write_text("MAXGRAM CLIENT modifies this NagramXF checkout to use the Komet-derived MAX backend.\nSee the parent project's SOURCE_PROVENANCE.md and docs/nagram-migration.md.\nUpstream copyright and GPL notices are retained.\n")
     print(json.dumps({"client_directory": str(output), **report}, indent=2))
 
 

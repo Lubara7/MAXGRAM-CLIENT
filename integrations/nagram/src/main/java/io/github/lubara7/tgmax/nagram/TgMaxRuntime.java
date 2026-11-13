@@ -44,6 +44,7 @@ public final class TgMaxRuntime {
     private volatile Function<String, CompletableFuture<String>> captchaHandler;
 
     public void preparePhoneAuth(String userAgent) {
+        client.device().language = TgMaxLocales.networkCode(LocaleController.getLocaleStringIso639());
         if (userAgent != null && !userAgent.isEmpty()) client.device().userAgent = userAgent;
     }
 
@@ -77,9 +78,9 @@ public final class TgMaxRuntime {
         models = new TgMaxModels(ids);
         executor = Executors.newSingleThreadExecutor(r -> { Thread t = new Thread(r, "tgmax-account-" + account); t.setDaemon(true); return t; });
         android.util.DisplayMetrics display = context.getResources().getDisplayMetrics();
-        MaxDevice device = new MaxDevice(local.deviceId(), TgMaxLocales.code(LocaleController.getLocaleStringIso639()),
+        MaxDevice device = new MaxDevice(local.deviceId(), TgMaxLocales.networkCode(LocaleController.getLocaleStringIso639()),
                 "Android " + Build.VERSION.RELEASE, display.widthPixels + "x" + display.heightPixels,
-                TimeZone.getDefault().getID(), "TG-MAX-Ultimate/0.2 Android/" + Build.VERSION.SDK_INT);
+                TimeZone.getDefault().getID(), "MAXGRAM-CLIENT/0.2 Android/" + Build.VERSION.SDK_INT);
         client = new MaxClient(new OkHttpClient.Builder().connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS).build(), device);
         api = new MaxApi(client);
         client.addPushListener(frame -> executor.execute(() -> {
@@ -155,23 +156,9 @@ public final class TgMaxRuntime {
         }
         if (request instanceof TLRPC.TL_auth_signIn) {
             TLRPC.TL_auth_signIn r = (TLRPC.TL_auth_signIn) request;
-            return api.verifyCode(r.phone_code, r.phone_code_hash).thenComposeAsync(data -> {
-                if (data.get("passwordChallenge") != null) {
-                    Map<String, Object> challenge = Maps.object(data.get("passwordChallenge"));
-                    passwordTrack = Maps.string(challenge.get("trackId"));
-                    passwordHint = Maps.string(challenge.get("hint"));
-                    if (passwordTrack.isEmpty()) { passwordTrack = null; throw new MaxException("MAX_AUTH_TRACK_MISSING"); }
-                    throw new MaxException("MAX_SESSION_PASSWORD_NEEDED");
-                }
-                String token = token(data, "LOGIN");
-                if (token.isEmpty()) {
-                    registrationToken = token(data, "REGISTER");
-                    if (registrationToken.isEmpty()) throw new MaxException("MAX_LOGIN_TOKEN_MISSING");
-                    return CompletableFuture.completedFuture(new TLRPC.TL_auth_authorizationSignUpRequired());
-                }
-                return authorize(token);
-            }, executor);
+            return api.verifyCode(r.phone_code, r.phone_code_hash).thenComposeAsync(this::acceptVerification, executor);
         }
+
         if (request instanceof TLRPC.TL_auth_signUp) {
             TLRPC.TL_auth_signUp r = (TLRPC.TL_auth_signUp) request;
             if (registrationToken == null) throw new MaxException("PHONE_CODE_EXPIRED");
@@ -310,6 +297,34 @@ public final class TgMaxRuntime {
         return login;
     }
 
+    public CompletableFuture<MaxCallOut.Check> checkCall(String trackId) { return api.checkCall(trackId); }
+    public CompletableFuture<TLObject> finishCall(String trackId) {
+        return api.loginByTrack(trackId).thenComposeAsync(this::acceptVerification, executor);
+    }
+    public CompletableFuture<TLObject> refreshPhoneCode() { return requestCode(authPhone, true); }
+
+    private CompletableFuture<TLObject> acceptVerification(Map<String, Object> data) {
+                if (data.get("passwordChallenge") != null) {
+                    Map<String, Object> challenge = Maps.object(data.get("passwordChallenge"));
+                    passwordTrack = Maps.string(challenge.get("trackId"));
+                    passwordHint = Maps.string(challenge.get("hint"));
+                    if (passwordTrack.isEmpty()) { passwordTrack = null; throw new MaxException("MAX_AUTH_TRACK_MISSING"); }
+                    throw new MaxException("MAX_SESSION_PASSWORD_NEEDED");
+                }
+                String token = token(data, "LOGIN");
+                if (token.isEmpty()) {
+                    registrationToken = token(data, "REGISTER");
+                    if (registrationToken.isEmpty()) throw new MaxException("MAX_LOGIN_TOKEN_MISSING");
+                    return CompletableFuture.completedFuture(new TLRPC.TL_auth_authorizationSignUpRequired());
+                }
+                return authorize(token);
+    }
+
+    public static final class CallSentCode extends TLRPC.TL_auth_sentCode {
+        public final MaxCallOut.Params call;
+        private CallSentCode(MaxCallOut.Params call) { this.call = call; }
+    }
+
     private CompletableFuture<TLObject> requestCode(String phone, boolean resend) {
         Function<String, CompletableFuture<String>> handler = captchaHandler;
         CompletableFuture<Map<String, Object>> operation = handler == null
@@ -321,8 +336,9 @@ public final class TgMaxRuntime {
 
     private TLObject sentCode(Map<String, Object> data) {
         String token = Maps.string(data.get("token"));
-        if (token.isEmpty()) throw new MaxException("MAX_AUTH_TOKEN_MISSING");
-        TLRPC.TL_auth_sentCode response = new TLRPC.TL_auth_sentCode();
+        MaxCallOut.Params call = data.get("callOutParams") == null ? null : new MaxCallOut.Params(data.get("callOutParams"));
+        if (token.isEmpty() && call == null) throw new MaxException("MAX_AUTH_TOKEN_MISSING");
+        TLRPC.TL_auth_sentCode response = call == null ? new TLRPC.TL_auth_sentCode() : new CallSentCode(call);
         TLRPC.TL_auth_sentCodeTypeSms type = new TLRPC.TL_auth_sentCodeTypeSms();
         type.length = Math.toIntExact(Maps.number(data.get("codeLength"), 6));
         if (type.length < 1 || type.length > 12) throw new MaxException("MAX_CODE_LENGTH_INVALID");

@@ -70,6 +70,20 @@ public final class MaxApi {
         return client.request(MaxOpcode.AUTH, Maps.of("token", token, "verifyCode", code, "authTokenType", "CHECK_CODE"));
     }
 
+    public CompletableFuture<MaxCallOut.Check> checkCall(String trackId) {
+        requireTrack(trackId);
+        return client.request(MaxOpcode.AUTH_CHECK_CALL, Maps.of("trackId", trackId)).thenApply(MaxCallOut.Check::new);
+    }
+
+    public CompletableFuture<Map<String, Object>> loginByTrack(String trackId) {
+        requireTrack(trackId);
+        return client.request(MaxOpcode.AUTH_BY_TRACK, Maps.of("trackId", trackId));
+    }
+
+    private static void requireTrack(String trackId) {
+        if (trackId == null || trackId.isEmpty()) throw new MaxException("PHONE_CODE_EXPIRED");
+    }
+
     public CompletableFuture<Map<String, Object>> register(String token, String firstName, String lastName) {
         return client.request(MaxOpcode.REGISTER, Maps.of("token", token, "tokenType", "REGISTER",
                 "firstName", firstName, "lastName", lastName));

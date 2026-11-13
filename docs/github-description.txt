@@ -1,0 +1,1 @@
+MAXGRAM CLIENT — unofficial MAX messenger for Android, built on NagramXF with Telegram-style UI and a native MAX backend.

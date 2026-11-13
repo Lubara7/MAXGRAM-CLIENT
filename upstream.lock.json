@@ -9,8 +9,8 @@
     },
     "komet": {
       "url": "https://github.com/KometTeam/Komet.git",
-      "commit": "7bbb73bd2c05877e48b37f6ec6f096471a341404",
-      "branch": "main",
+      "commit": "7ce5814e625f61b553b92e13e09ee59d5a01057e",
+      "branch": "dev/0.5.0",
       "license": "GPL-3.0-or-later"
     }
   }

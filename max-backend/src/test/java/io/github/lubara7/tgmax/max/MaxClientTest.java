@@ -88,7 +88,7 @@ public class MaxClientTest {
             }
         }, 2_000);
         try { c.request(49, Maps.of()).get(4, TimeUnit.SECONDS); fail("Mismatched response accepted"); }
-        catch (ExecutionException expected) { assertEquals("PROTOCOL_ERROR", ((MaxException) root(expected)).code); }
+        catch (ExecutionException expected) { assertEquals("PROTOCOL_ERROR:RESPONSE_OPCODE_MISMATCH", ((MaxException) root(expected)).code); }
         assertFalse(c.isConnected());
     }
 
@@ -199,6 +199,27 @@ public class MaxClientTest {
         assertTrue(proof.isCancelled());
         assertFalse(proof.complete("late-proof"));
         assertEquals(0, sms.get());
+    }
+
+    @Test public void outgoingCallUsesServerTrackAndCorrectOpcodes() throws Exception {
+        java.util.List<Integer> opcodes = new java.util.concurrent.CopyOnWriteArrayList<>();
+        MaxClient client = start(new WebSocketListener() {
+            @Override public void onMessage(WebSocket ws, ByteString bytes) {
+                MaxFrame request = codec.decode(bytes.toByteArray());
+                if (request.opcode == MaxOpcode.INIT) { respond(ws, request, Maps.of()); return; }
+                opcodes.add(request.opcode);
+                assertEquals(Maps.of("trackId", "synthetic-call-track"), request.payload);
+                if (request.opcode == 294) respond(ws, request, Maps.of("status", 1, "callNumber", "+19995550123"));
+                else if (request.opcode == 291) respond(ws, request, Maps.of("passwordChallenge", Maps.of("trackId", "synthetic-password-track")));
+                else fail("Unexpected call authentication opcode");
+            }
+        }, 2000);
+        MaxApi api = new MaxApi(client);
+        MaxCallOut.Check check = api.checkCall("synthetic-call-track").get(4, TimeUnit.SECONDS);
+        assertEquals(1, check.status);
+        assertEquals("+19995550123", check.callNumber);
+        assertTrue(api.loginByTrack("synthetic-call-track").get(4, TimeUnit.SECONDS).containsKey("passwordChallenge"));
+        assertEquals(java.util.List.of(294, 291), opcodes);
     }
 
     private void respond(WebSocket ws, MaxFrame request, Object payload) {
