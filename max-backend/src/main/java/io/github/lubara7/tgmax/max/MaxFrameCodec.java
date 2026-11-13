@@ -11,6 +11,9 @@ import net.jpountz.lz4.LZ4Factory;
 import org.msgpack.core.MessageBufferPacker;
 import org.msgpack.core.MessagePack;
 import org.msgpack.core.MessageUnpacker;
+import org.msgpack.core.ExtensionTypeHeader;
+import io.airlift.compress.zstd.ZstdDecompressor;
+import java.util.Arrays;
 import java.nio.charset.StandardCharsets;
 
 public final class MaxFrameCodec {
@@ -55,18 +58,46 @@ public final class MaxFrameCodec {
         }
         byte[] body = new byte[length];
         buffer.get(body);
-        if (ratio > 0) {
-            long capacity = (long) length * ratio * 16;
-            if (capacity > MAX_UNCOMPRESSED) throw new MaxException("DECOMPRESSED_FRAME_TOO_LARGE");
+        if (ratio == 255) {
             try {
-                body = LZ4Factory.fastestJavaInstance().safeDecompressor().decompress(body, (int) capacity);
-            } catch (LZ4Exception e) { throw new MaxException("INVALID_COMPRESSION", e); }
+                long size = ZstdDecompressor.getDecompressedSize(body, 0, body.length);
+                if (size > MAX_UNCOMPRESSED) throw new MaxException("DECOMPRESSED_FRAME_TOO_LARGE");
+                byte[] decoded = new byte[size < 0 ? MAX_UNCOMPRESSED : (int) size];
+                int written = new ZstdDecompressor().decompress(body, 0, body.length, decoded, 0, decoded.length);
+                body = Arrays.copyOf(decoded, written);
+            } catch (MaxException e) { throw e; }
+            catch (RuntimeException e) { throw new MaxException("INVALID_COMPRESSION", e); }
+        } else if (ratio > 0) {
+            if (ratio > 127) throw new MaxException("INVALID_COMPRESSION");
+            int capacity = (int) Math.min(MAX_UNCOMPRESSED, Math.max(65_536L, (long) length * ratio * 16));
+            while (true) {
+                try {
+                    body = LZ4Factory.fastestJavaInstance().safeDecompressor().decompress(body, capacity);
+                    break;
+                } catch (LZ4Exception e) {
+                    if (capacity == MAX_UNCOMPRESSED) throw new MaxException("INVALID_COMPRESSION", e);
+                    capacity = Math.min(MAX_UNCOMPRESSED, capacity * 2);
+                }
+            }
         }
         try (MessageUnpacker unpacker = MessagePack.newDefaultUnpacker(body)) {
-            Object payload = unpack(unpacker, 0);
-            if (unpacker.hasNext()) throw new MaxException("TRAILING_PAYLOAD");
+            Object payload = unpackSequence(unpacker, 0);
             return new MaxFrame(command, sequence, opcode, payload);
         } catch (IOException | IllegalArgumentException e) { throw new MaxException("DECODE_FAILED", e); }
+    }
+
+    private Object unpackSequence(MessageUnpacker unpacker, int depth) throws IOException {
+        Object first = null;
+        Map<?, ?> object = null;
+        int count = 0;
+        while (unpacker.hasNext()) {
+            if (++count > 1024) throw new MaxException("COLLECTION_TOO_LARGE");
+            Object value = unpack(unpacker, depth);
+            if (count == 1) first = value;
+            if (object == null && value instanceof Map) object = (Map<?, ?>) value;
+        }
+        if (count > 1 && object == null) throw new MaxException("INVALID_PAYLOAD_SEQUENCE");
+        return object == null ? first : object;
     }
 
     private void pack(MessageBufferPacker p, Object value, int depth) throws IOException {
@@ -128,7 +159,22 @@ public final class MaxFrameCodec {
                     map.put(name, unpack(u, depth + 1));
                 }
                 return map;
+            case EXTENSION:
+                ExtensionTypeHeader extension = u.unpackExtensionTypeHeader();
+                if (extension.getLength() > MAX_BODY) throw new MaxException("EXTENSION_TOO_LARGE");
+                byte[] nested = u.readPayload(extension.getLength());
+                if (extension.getType() != 1) return new Extension(extension.getType(), nested);
+                try (MessageUnpacker child = MessagePack.newDefaultUnpacker(nested)) {
+                    return unpackSequence(child, depth + 1);
+                }
             default: throw new MaxException("UNSUPPORTED_MSGPACK_VALUE");
         }
+    }
+
+    public static final class Extension {
+        public final byte type;
+        private final byte[] data;
+        private Extension(byte type, byte[] data) { this.type = type; this.data = data; }
+        public byte[] data() { return data.clone(); }
     }
 }

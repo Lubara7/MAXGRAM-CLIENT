@@ -1,0 +1,17 @@
+{
+  "package": "ru.oneme.app",
+  "version": "26.19.2",
+  "versionCode": 6733,
+  "apkSha256": "a658458209fb9cb3e57bf544eeb3b61a7b16685d2b595ccc9a5665f1e4f4c92f",
+  "source": "User-supplied MAX.apk",
+  "assets": {
+    "mipmap-mdpi/ic_launcher_background.webp": "ab4c5e61cfd2fdd8d0758d7f5fcb1f6dbefab5a6b2696cbe54e2fb66ce7a459b",
+    "mipmap-xhdpi/ic_launcher_background.webp": "08301419573b04707d98e648652f545fc1f93292da2f9c76722f981306481584",
+    "mipmap-xxhdpi/ic_launcher_background.webp": "a5b1c62a91e23415d5d5b22902487eba7a0adb9b4d0db915aaef3ae72090d3bb",
+    "mipmap-xxxhdpi/ic_launcher_background.webp": "4d34fbbeebc70f7ffcedceb8d7eaaa2b0cf043801b3c8fa68cb88f135a0e4e31",
+    "mipmap-hdpi/ic_launcher_background.webp": "5cea2c64729668fec3b5117dd8c4637a283506841925fe2cc303d394731dc23e",
+    "raw/bell_anim.json": "df9f0f1d799de0610ea0032a9479df88ae3360af1da772a0b6cba35e77c3715c",
+    "raw/invite_friends.json": "0a8cc7e2f081e99b8cf014c2ea78c1081549415a05634da5a51995249c619a57"
+  },
+  "note": "MAX artwork and animations retain their original ownership; the project GPL covers our code, not third-party trademarks or artwork."
+}

@@ -48,6 +48,40 @@ public class MaxFrameCodecTest {
         reject(hex("0a010003000100000002a1ff"));
     }
 
+    @Test public void nestedMessagePackExtensionAndTrailingValuesPreserveAuthResponse() throws Exception {
+        byte[] auth = Arrays.copyOfRange(codec.encode(new MaxFrame(1, 7, 17,
+                Maps.of("token", "synthetic-otp", "codeLength", 6))), 10,
+                codec.encode(new MaxFrame(1, 7, 17, Maps.of("token", "synthetic-otp", "codeLength", 6))).length);
+        try (org.msgpack.core.MessageBufferPacker pack = org.msgpack.core.MessagePack.newDefaultBufferPacker()) {
+            pack.packString("metadata");
+            pack.packExtensionTypeHeader((byte) 1, auth.length).writePayload(auth);
+            pack.packNil();
+            MaxFrame decoded = codec.decode(frame(pack.toByteArray(), 0));
+            assertEquals("synthetic-otp", Maps.object(decoded.payload).get("token"));
+            assertEquals(6, Maps.number(Maps.object(decoded.payload).get("codeLength")));
+        }
+    }
+
+    @Test public void zstdCompressedAuthResponseAndLz4WithSmallHintAreSupported() {
+        byte[] original = codec.encode(new MaxFrame(1, 7, 17, Maps.of("token", "synthetic-otp",
+                "metadata", String.join("", Collections.nCopies(100000, "x")))));
+        byte[] body = Arrays.copyOfRange(original, 10, original.length);
+        byte[] compressed = new byte[body.length + 4096];
+        int length = new io.airlift.compress.zstd.ZstdCompressor().compress(body, 0, body.length, compressed, 0, compressed.length);
+        assertEquals(Maps.object(codec.decode(original).payload), Maps.object(codec.decode(frame(Arrays.copyOf(compressed, length), 255)).payload));
+        byte[] lz4 = LZ4Factory.fastestJavaInstance().fastCompressor().compress(body);
+        assertEquals(Maps.object(codec.decode(original).payload), Maps.object(codec.decode(frame(lz4, 1)).payload));
+        reject(frame(new byte[] {1, 2, 3}, 255));
+        reject(frame(body, 128));
+    }
+
+    private byte[] frame(byte[] body, int compression) {
+        ByteBuffer header = ByteBuffer.allocate(10 + body.length);
+        header.put(new byte[] {10, 1, 0, 7, 0, 17, (byte) compression, (byte) (body.length >>> 16),
+                (byte) (body.length >>> 8), (byte) body.length}).put(body);
+        return header.array();
+    }
+
     private void reject(byte[] bytes) {
         try { codec.decode(bytes); fail("Invalid frame accepted"); }
         catch (MaxException expected) { }

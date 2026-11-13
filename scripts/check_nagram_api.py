@@ -139,6 +139,8 @@ public class Utilities { public static DispatchQueue stageQueue;
 import java.util.*;
 public class LocaleController {
  public static String getLocaleStringIso639() {return "en";}
+ public static LocaleController getInstance() {return null;}
+ public Locale getCurrentLocale() {return Locale.ENGLISH;}
  public ArrayList<LocaleInfo> languages,remoteLanguages,unofficialLanguages;
  public HashMap<String,LocaleInfo> languagesDict,remoteLanguagesDict;
  public static class LocaleInfo {

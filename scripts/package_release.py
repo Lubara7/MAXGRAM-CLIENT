@@ -66,17 +66,17 @@ def main():
     if "sdkVersion:'27'" not in badging or "name='io.github.lubara7.tgmax'" not in badging:
         raise SystemExit('Manifest identity/minimum SDK check failed')
     output.mkdir(parents=True, exist_ok=True)
-    filename = f'TG-MAX-Ultimate-{release["version"]}-{release["abi"]}.apk'
+    filename = f'MAXGRAM-CLIENT-{release["version"]}-{release["abi"]}.apk'
     destination = output / filename
     shutil.copy2(apk, destination)
     (output / 'apk-manifest.txt').write_text(badging)
     modules = subprocess.check_output(['git', 'submodule', 'status'], cwd=client, text=True)
     (client / 'TGMAX_NATIVE_DEPENDENCIES.txt').write_text(modules)
-    source = output / f'TG-MAX-Ultimate-{release["version"]}-source.tar.gz'
+    source = output / f'MAXGRAM-CLIENT-{release["version"]}-source.tar.gz'
     with tarfile.open(source, 'w:gz', compresslevel=3) as tar:
-        tar.add(client, arcname='TG-MAX-Ultimate/nagram-client', filter=source_filter)
+        tar.add(client, arcname='MAXGRAM-CLIENT/nagram-client', filter=source_filter)
         for path in ['LICENSE', 'SOURCE_PROVENANCE.md', 'upstream.lock.json', 'release.json', 'README.md', 'scripts', 'integrations', 'docs', 'max-backend']:
-            tar.add(ROOT / path, arcname='TG-MAX-Ultimate/integration/' + path, filter=source_filter)
+            tar.add(ROOT / path, arcname='MAXGRAM-CLIENT/integration/' + path, filter=source_filter)
     hashes = []
     for file in [destination, source]:
         digest = hashlib.file_digest(file.open('rb'), 'sha256').hexdigest()

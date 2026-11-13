@@ -82,7 +82,10 @@ public final class MaxClient implements Closeable {
                         @Override public void onMessage(WebSocket ws, ByteString bytes) {
                             if (ws != socket) return;
                             try { receive(codec.decode(bytes.toByteArray())); }
-                            catch (RuntimeException e) { disconnected(ws, new MaxException("PROTOCOL_ERROR", e)); }
+                            catch (RuntimeException e) {
+                                String detail = e instanceof MaxException ? ((MaxException) e).code : "INVALID_RESPONSE";
+                                disconnected(ws, new MaxException("PROTOCOL_ERROR:" + detail, e));
+                            }
                         }
 
                         @Override public void onMessage(WebSocket ws, String text) {

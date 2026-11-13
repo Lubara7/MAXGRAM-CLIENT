@@ -76,7 +76,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           RELEASE_TAG=$(python3 -c 'import json; print(json.load(open("release.json"))["tag"])')
-          gh release create "$RELEASE_TAG" dist/*.apk dist/SHA256SUMS.txt dist/signature-verification.txt dist/*-source.tar.gz --target "$GITHUB_SHA" --prerelease --title "TG-MAX Ultimate $RELEASE_TAG — Nagram alpha" --notes-file docs/release-notes.md
+          gh release create "$RELEASE_TAG" dist/*.apk dist/SHA256SUMS.txt dist/signature-verification.txt dist/*-source.tar.gz --target "$GITHUB_SHA" --prerelease --title "MAXGRAM CLIENT $RELEASE_TAG — Nagram alpha" --notes-file docs/release-notes.md
       - name: Upload build reports
         if: always()
         uses: actions/upload-artifact@v6

@@ -25,3 +25,14 @@ assert 'clearCaptchaHandler(maxCaptchaHandler)' in login
 assert 'TL_help_getNearestDc req' not in login
 assert (client / 'TMessagesProj/src/main/assets/tgmax-captcha.html').is_file()
 print('44 ordered countries, shared codes, Russian login copy and CAPTCHA lifecycle checked')
+
+assert text['YourNumber'] == 'Ваш номер телефона'
+assert text['Country'] == 'Страна'
+assert 'R.drawable.maxgram_help' in login
+assert 'https://legal.max.ru/recsysrules' in login
+assert 'TgMaxCallActivity' in login
+for qualifier in ['values', 'values-ru', 'values-es', 'values-pt-rBR', 'values-uz', 'values-fr', 'values-be']:
+    strings = {s.get('name'): s.text for s in ET.parse(resources / qualifier / 'strings.xml').findall('string')}
+    assert all(strings.get(key) for key in ['YourNumber', 'Country', 'TgMaxLanguageTitle', 'TgMaxCallTitle', 'TgMaxPrivacy', 'TgMaxTerms', 'TgMaxRecommendations'])
+    assert strings['AppName'] == 'MAXGRAM CLIENT'
+print('MAXGRAM name, seven login translations, help, legal footer and call screen preparation checked')

@@ -5,7 +5,7 @@ import java.util.Map;
 
 public final class MaxDevice {
     public final String id;
-    public final String language;
+    public volatile String language;
     public final String osVersion;
     public final String screen;
     public final String timezone;
@@ -23,7 +23,7 @@ public final class MaxDevice {
     public Map<String, Object> handshake() {
         return Maps.of("deviceId", id, "userAgent", Maps.of(
                 "deviceType", "WEB", "locale", language, "deviceLocale", language,
-                "osVersion", osVersion, "deviceName", "TG-MAX Ultimate", "headerUserAgent", userAgent,
+                "osVersion", osVersion, "deviceName", "MAXGRAM CLIENT", "headerUserAgent", userAgent,
                 "appVersion", "26.8.8", "screen", screen, "timezone", timezone, "isPwa", false));
     }
 

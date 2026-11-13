@@ -24,7 +24,7 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "TG-MAX-Ultimate"
+rootProject.name = "MAXGRAM-CLIENT"
 include(":max-backend", ":auth-harness", ":core:domain", ":core:data", ":core:ui", ":core:localization", ":feature:auth")
 
 project(":auth-harness").projectDir = file("tools-auth-harness")
