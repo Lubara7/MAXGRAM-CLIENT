@@ -1,5 +1,8 @@
 name: Install published APK
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/apk-smoke.yml']
   workflow_run:
     workflows: ["Nagram APK release"]
     types: [completed]
@@ -8,7 +11,7 @@ permissions:
   contents: read
 jobs:
   phone-screen:
-    if: github.event.workflow_run.conclusion == 'success' && contains(github.event.workflow_run.head_commit.message, '[release]')
+    if: github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' && contains(github.event.workflow_run.head_commit.message, '[release]')
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -42,15 +45,17 @@ jobs:
           adb shell wm dismiss-keyguard
           activity=$(adb shell cmd package resolve-activity --brief "$pkg" | tail -n1 | tr -d '\r')
           adb shell am start -W -n "$activity"
-          for attempt in $(seq 1 12); do
+          for attempt in $(seq 1 35); do
             adb shell uiautomator dump /sdcard/tgmax-ui.xml >/dev/null 2>&1 || continue
-            adb pull /sdcard/tgmax-ui.xml login.xml >/dev/null
+            adb pull /sdcard/tgmax-ui.xml login.xml >/dev/null || { sleep 2; continue; }
             if python -c 'import xml.etree.ElementTree as E; assert any(n.get("package") == "io.github.lubara7.tgmax" and n.get("content-desc") == "Phone number" for n in E.parse("login.xml").iter("node"))'; then
               adb exec-out screencap -p > login.png
               exit 0
             fi
             sleep 2
           done
+          adb exec-out screencap -p > login.png
+          adb shell dumpsys activity activities | grep -E "mResumedActivity|mFocusedApp" || true
           adb logcat -b crash -d
           exit 1
           SCRIPT
