@@ -304,20 +304,20 @@ public final class TgMaxRuntime {
     public CompletableFuture<TLObject> refreshPhoneCode() { return requestCode(authPhone, true); }
 
     private CompletableFuture<TLObject> acceptVerification(Map<String, Object> data) {
-                if (data.get("passwordChallenge") != null) {
-                    Map<String, Object> challenge = Maps.object(data.get("passwordChallenge"));
-                    passwordTrack = Maps.string(challenge.get("trackId"));
-                    passwordHint = Maps.string(challenge.get("hint"));
-                    if (passwordTrack.isEmpty()) { passwordTrack = null; throw new MaxException("MAX_AUTH_TRACK_MISSING"); }
-                    throw new MaxException("MAX_SESSION_PASSWORD_NEEDED");
-                }
-                String token = token(data, "LOGIN");
-                if (token.isEmpty()) {
-                    registrationToken = token(data, "REGISTER");
-                    if (registrationToken.isEmpty()) throw new MaxException("MAX_LOGIN_TOKEN_MISSING");
-                    return CompletableFuture.completedFuture(new TLRPC.TL_auth_authorizationSignUpRequired());
-                }
-                return authorize(token);
+        if (data.get("passwordChallenge") != null) {
+            Map<String, Object> challenge = Maps.object(data.get("passwordChallenge"));
+            passwordTrack = Maps.string(challenge.get("trackId"));
+            passwordHint = Maps.string(challenge.get("hint"));
+            if (passwordTrack.isEmpty()) { passwordTrack = null; throw new MaxException("MAX_AUTH_TRACK_MISSING"); }
+            throw new MaxException("MAX_SESSION_PASSWORD_NEEDED");
+        }
+        String token = token(data, "LOGIN");
+        if (token.isEmpty()) {
+            registrationToken = token(data, "REGISTER");
+            if (registrationToken.isEmpty()) throw new MaxException("MAX_LOGIN_TOKEN_MISSING");
+            return CompletableFuture.completedFuture(new TLRPC.TL_auth_authorizationSignUpRequired());
+        }
+        return authorize(token);
     }
 
     public static final class CallSentCode extends TLRPC.TL_auth_sentCode {

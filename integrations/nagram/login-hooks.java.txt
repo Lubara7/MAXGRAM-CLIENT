@@ -73,11 +73,11 @@
 
     private void layoutMaxLoginControls(int keyboardOffset, int statusBarHeight) {
         if (maxLanguageButton != null) {
-            ((MarginLayoutParams) maxLanguageButton.getLayoutParams()).topMargin = dp(16) + statusBarHeight;
+            ((android.view.ViewGroup.MarginLayoutParams) maxLanguageButton.getLayoutParams()).topMargin = dp(16) + statusBarHeight;
         }
         if (maxPolicy != null && maxPolicy.getVisibility() == View.VISIBLE) {
-            ((MarginLayoutParams) maxPolicy.getLayoutParams()).bottomMargin = dp(8) + keyboardOffset;
-            ((MarginLayoutParams) floatingButton.getLayoutParams()).bottomMargin += maxPolicy.getMeasuredHeight() + dp(16);
+            ((android.view.ViewGroup.MarginLayoutParams) maxPolicy.getLayoutParams()).bottomMargin = dp(8) + keyboardOffset;
+            ((android.view.ViewGroup.MarginLayoutParams) floatingButton.getLayoutParams()).bottomMargin += maxPolicy.getMeasuredHeight() + dp(16);
         }
     }
 

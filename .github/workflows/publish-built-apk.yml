@@ -1,14 +1,10 @@
 name: Publish built APK
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/publish-built-apk.yml']
   workflow_dispatch:
     inputs:
       build_run_id:
         description: Successful APK build artifact run
         required: true
-        default: '43443976196'
 permissions:
   contents: read
 jobs:
@@ -21,7 +17,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      BUILD_RUN_ID: ${{ inputs.build_run_id || '43443976196' }}
+      BUILD_RUN_ID: ${{ inputs.build_run_id }}
       TGMAX_ALPHA_KEYSTORE: /tmp/tgmax-signing/debug.keystore
     steps:
       - uses: actions/checkout@v6

@@ -41,6 +41,7 @@ public final class TgMaxCallActivity extends BaseFragment {
         this.phone = phone;
         this.params = params;
         this.completion = completion;
+        this.deadline = SystemClock.elapsedRealtime() + params.ttlMillis;
     }
 
     @Override public View createView(Context context) {
@@ -84,7 +85,8 @@ public final class TgMaxCallActivity extends BaseFragment {
                 timer.setText(LocaleController.getString(R.string.TgMaxCallDialerMissing));
             }
         });
-        deadline = SystemClock.elapsedRealtime() + params.ttlMillis;
+        AndroidUtilities.cancelRunOnUIThread(tick);
+        AndroidUtilities.cancelRunOnUIThread(poll);
         updateTimer();
         check();
         return root;
