@@ -1,5 +1,9 @@
 name: Install published APK
 on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/apk-smoke.yml', 'scripts/check_phone_ui.py', 'scripts/ExtractCodecDex.java', 'scripts/CodecDeviceSmoke.java']
   workflow_run:
     workflows: ["Nagram APK release", "Publish built APK"]
     types: [completed]
@@ -8,7 +12,7 @@ permissions:
   contents: read
 jobs:
   phone-screen:
-    if: github.event.workflow_run.conclusion == 'success' && (contains(github.event.workflow_run.head_commit.message, '[release]') || github.event.workflow_run.name == 'Publish built APK')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && !contains(github.event.head_commit.message, '[release]')) || (github.event.workflow_run.conclusion == 'success' && (contains(github.event.workflow_run.head_commit.message, '[release]') || github.event.workflow_run.name == 'Publish built APK'))
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -47,9 +51,15 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - name: Prepare Android protocol fixture check
         run: |
-          mkdir -p codec-classes
+          mkdir -p codec-classes codec-tools codec-libs
+          curl --fail --silent --show-error --location https://repo.maven.apache.org/maven2/org/smali/dexlib2/2.5.2/dexlib2-2.5.2.jar -o codec-libs/dexlib2.jar
+          curl --fail --silent --show-error --location https://repo.maven.apache.org/maven2/org/smali/util/2.5.2/util-2.5.2.jar -o codec-libs/util.jar
+          curl --fail --silent --show-error --location https://repo.maven.apache.org/maven2/com/google/guava/guava/27.1-android/guava-27.1-android.jar -o codec-libs/guava.jar
+          curl --fail --silent --show-error --location https://repo.maven.apache.org/maven2/com/google/code/findbugs/jsr305/3.0.2/jsr305-3.0.2.jar -o codec-libs/jsr305.jar
+          javac -cp 'codec-libs/*' -d codec-tools scripts/ExtractCodecDex.java
+          java -Xmx2g -cp 'codec-tools:codec-libs/*' ExtractCodecDex ./*.apk codec-library.dex
           javac -source 8 -target 8 -d codec-classes scripts/CodecDeviceSmoke.java
-          "$ANDROID_HOME/build-tools/36.0.0/d8" --min-api 27 --output codec-smoke.zip codec-classes/CodecDeviceSmoke.class
+          "$ANDROID_HOME/build-tools/36.0.0/d8" --min-api 27 --output codec-smoke.zip codec-classes/CodecDeviceSmoke.class codec-library.dex
       - name: Allow emulator hardware acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -62,14 +72,13 @@ jobs:
           pkg=io.github.lubara7.tgmax
           adb shell getprop ro.product.cpu.abilist | grep -F arm64-v8a
           adb install -g ./*.apk
-          adb push ./*.apk /data/local/tmp/maxgram.apk
           adb push codec-smoke.zip /data/local/tmp/codec-smoke.zip
-          adb shell 'CLASSPATH=/data/local/tmp/maxgram.apk:/data/local/tmp/codec-smoke.zip app_process /data/local/tmp CodecDeviceSmoke'
           adb shell input keyevent KEYCODE_WAKEUP
           adb shell wm dismiss-keyguard
           activity=$(adb shell cmd package resolve-activity --brief "$pkg" | tail -n1 | tr -d '\r')
           adb shell am start -W -n "$activity"
           python3 scripts/check_phone_ui.py
+          adb shell 'CLASSPATH=/data/local/tmp/codec-smoke.zip app_process -Xmx192m /data/local/tmp CodecDeviceSmoke'
           SCRIPT
       - name: Install and open phone login
         uses: reactivecircus/android-emulator-runner@v2
