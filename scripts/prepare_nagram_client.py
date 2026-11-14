@@ -172,7 +172,7 @@ def configure_build(target):
     app = target / "TMessagesProj/build.gradle"
     change(app, "    id 'com.google.gms.google-services'\n", "")
     change(app, "    id 'com.google.firebase.crashlytics'\n", "")
-    change(app, "dependencies {", "dependencies {\n    implementation project(':tgmax-backend')\n    implementation 'com.github.luben:zstd-jni:1.5.7-28@aar'")
+    change(app, "dependencies {", "dependencies {\n    implementation project(':tgmax-backend')\n    implementation 'com.github.luben:zstd-jni:1.5.7-7@aar'")
     change(app, "    defaultConfig.applicationId = APP_PACKAGE", "    defaultConfig.applicationId = APP_PACKAGE\n    defaultConfig.resourceConfigurations += ['en', 'ru', 'es', 'uz', 'pt', 'pt-rBR', 'fr', 'be']")
     text = app.read_text()
     start = text.index("        // obtain your own keys")
@@ -190,8 +190,8 @@ def configure_build(target):
     shutil.copytree(ROOT / "max-backend", target / "tgmax-backend", ignore=shutil.ignore_patterns("build", ".gradle"))
     # Android must package the official AAR, not the desktop JVM JAR with its native binaries.
     change(target / "tgmax-backend/build.gradle.kts",
-           '    implementation("com.github.luben:zstd-jni:1.5.7-28")',
-           '    compileOnly("com.github.luben:zstd-jni:1.5.7-28")\n    testImplementation("com.github.luben:zstd-jni:1.5.7-28")')
+           '    implementation("com.github.luben:zstd-jni:1.5.7-7")',
+           '    compileOnly("com.github.luben:zstd-jni:1.5.7-7")\n    testImplementation("com.github.luben:zstd-jni:1.5.7-7")')
     rules = target / "TMessagesProj/proguard-rules.pro"
     rules.write_text(rules.read_text() + '\n# JNI resolves these names from the Android Zstandard library.\n-keep class com.github.luben.zstd.** { *; }\n')
     properties = target / "gradle.properties"
