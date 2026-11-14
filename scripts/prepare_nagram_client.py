@@ -191,7 +191,7 @@ def configure_build(target):
     # Android must package the official AAR, not the desktop JVM JAR with its native binaries.
     change(target / "tgmax-backend/build.gradle.kts",
            '    implementation("com.github.luben:zstd-jni:1.5.7-28")',
-           '    compileOnly("com.github.luben:zstd-jni:1.5.7-28")\n    testRuntimeOnly("com.github.luben:zstd-jni:1.5.7-28")')
+           '    compileOnly("com.github.luben:zstd-jni:1.5.7-28")\n    testImplementation("com.github.luben:zstd-jni:1.5.7-28")')
     rules = target / "TMessagesProj/proguard-rules.pro"
     rules.write_text(rules.read_text() + '\n# JNI resolves these names from the Android Zstandard library.\n-keep class com.github.luben.zstd.** { *; }\n')
     properties = target / "gradle.properties"
