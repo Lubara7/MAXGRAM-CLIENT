@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-JAVA_PREFIX = "io.github.lubara7.tgmax.nagram."
+JAVA_PREFIX = "io.github.lubara7.tgmax.telegram."
 
 
 def run(*args, cwd=None):
@@ -142,8 +142,9 @@ def install_auth_translations(resources):
     names = {"values": "English", "values-ru": "Русский", "values-es": "Español",
              "values-uz": "O‘zbek", "values-pt": "Português (Portugal)",
              "values-pt-rBR": "Português (Brasil)", "values-fr": "Français", "values-be": "Беларуская"}
-    navigation = json.loads((ROOT / "integrations/nagram/navigation-strings.json").read_text())
-    auth = json.loads((ROOT / "integrations/nagram/auth-strings.json").read_text())
+    navigation = json.loads((ROOT / "integrations/telegram/navigation-strings.json").read_text())
+    auth = json.loads((ROOT / "integrations/telegram/auth-strings.json").read_text())
+    local = json.loads((ROOT / "integrations/telegram/local-strings.json").read_text())
     for qualifier, native_name in names.items():
         source = ROOT / "core/localization/src/main/res" / qualifier / "strings.xml"
         root = ET.parse(source).getroot()
@@ -151,6 +152,7 @@ def install_auth_translations(resources):
         translations = {key: strings[name] for name, keys in mapping.items() for key in keys}
         translations.update(navigation[qualifier])
         translations.update(auth.get(qualifier, auth["values-pt-rBR"] if qualifier == "values-pt" else {}))
+        translations.update(local[qualifier])
         translations.update(AppName="MAXGRAM CLIENT", AppNameBeta="MAXGRAM CLIENT", LanguageName=native_name)
         destination = resources / qualifier / "strings.xml"
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -169,52 +171,53 @@ def install_auth_translations(resources):
 
 
 def configure_build(target):
-    app = target / "TMessagesProj/build.gradle"
-    change(app, "    id 'com.google.gms.google-services'\n", "")
-    change(app, "    id 'com.google.firebase.crashlytics'\n", "")
-    change(app, "dependencies {", "dependencies {\n    implementation project(':tgmax-backend')\n    implementation 'com.github.luben:zstd-jni:1.5.7-7@aar'")
-    change(app, "    defaultConfig.applicationId = APP_PACKAGE", "    defaultConfig.applicationId = APP_PACKAGE\n    defaultConfig.resourceConfigurations += ['en', 'ru', 'es', 'uz', 'pt', 'pt-rBR', 'fr', 'be']")
-    text = app.read_text()
-    start = text.index("        // obtain your own keys")
-    stop = text.index("        buildConfigField 'String', 'BUILD_VERSION_STRING'", start)
-    text = text[:start] + "        def appId = '0'\n        def appHash = ''\n\n" + text[stop:]
-    debug = text.index("        debug {", text.index("    buildTypes"))
-    signing = text.index("signingConfig = signingConfigs.release", debug)
-    text = text[:signing] + text[signing:].replace("signingConfig = signingConfigs.release", "signingConfig = signingConfigs.debug", 1)
-    text += '\nif (System.getenv("TGMAX_ALPHA_KEYSTORE")) {\n    android.signingConfigs.debug.storeFile = file(System.getenv("TGMAX_ALPHA_KEYSTORE"))\n}\n'
     release = json.loads((ROOT / "release.json").read_text())
-    text = re.sub(r"def verCode = \d+", f"def verCode = {release['versionCode']}", text, count=1)
+    library = target / "TMessagesProj/build.gradle"
+    app = target / "TMessagesProj_AppStandalone/build.gradle"
+    for gradle in [library, app]:
+        text = gradle.read_text().replace("apply plugin: 'com.google.gms.google-services'", "")
+        text = text.replace("JavaVersion.VERSION_1_8", "JavaVersion.VERSION_17")
+        text = text.replace("minSdkVersion 23", "minSdkVersion 27").replace("android-23", "android-27")
+        text = text.replace("version '3.22.1'", "version '3.31.6'")
+        gradle.write_text(text)
+    change(library, "dependencies {", "dependencies {\n    implementation project(':tgmax-backend')\n    implementation 'com.github.luben:zstd-jni:1.5.7-7@aar'")
+    library.write_text(library.read_text() + "\nandroid.defaultConfig.ndk.abiFilters.add('arm64-v8a')\n")
+    text = app.read_text().replace('applicationIdSuffix ".web"', '')
+    text = text.replace('abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"', 'abiFilters "arm64-v8a"')
+    text = text.replace('output.versionCodeOverride = defaultConfig.versionCode * 10 + variant.productFlavors.get(0).abiVersionCode',
+                        'output.versionCodeOverride = defaultConfig.versionCode')
+    text = text.replace('localeFilters += ["zz"]', 'localeFilters += ["en", "ru", "es", "uz", "pt", "pt-rBR", "fr", "be", "zz"]')
+    text += '\nandroid.signingConfigs.debug {\n    storeFile = file(System.getenv("TGMAX_ALPHA_KEYSTORE") ?: (System.getProperty("user.home") + "/.android/debug.keystore"))\n    storePassword = "android"\n    keyAlias = "androiddebugkey"\n    keyPassword = "android"\n}\n'
     app.write_text(text)
     settings = target / "settings.gradle"
-    settings.write_text(settings.read_text() + "\ninclude ':tgmax-backend'\n")
+    text = settings.read_text()
+    for module in ['TMessagesProj_App', 'TMessagesProj_AppHuawei', 'TMessagesProj_AppHockeyApp', 'TMessagesProj_AppTests']:
+        text = text.replace("include ':" + module + "'\n", '')
+    settings.write_text(text + "\ninclude ':tgmax-backend'\n")
     shutil.copytree(ROOT / "max-backend", target / "tgmax-backend", ignore=shutil.ignore_patterns("build", ".gradle"))
-    # Android must package the official AAR, not the desktop JVM JAR with its native binaries.
     change(target / "tgmax-backend/build.gradle.kts",
            '    implementation("com.github.luben:zstd-jni:1.5.7-7")',
            '    compileOnly("com.github.luben:zstd-jni:1.5.7-7")\n    testImplementation("com.github.luben:zstd-jni:1.5.7-7")')
     rules = target / "TMessagesProj/proguard-rules.pro"
-    rules.write_text(rules.read_text() + '\n# JNI resolves these names from the Android Zstandard library.\n-keep class com.github.luben.zstd.** { *; }\n')
+    rules.write_text(rules.read_text() + '\n-keep class com.github.luben.zstd.** { *; }\n')
     properties = target / "gradle.properties"
     text = properties.read_text()
-    text = re.sub(r"(?m)^APP_PACKAGE=.*$", "APP_PACKAGE=io.github.lubara7.tgmax", text)
-    version = release["version"]
-    text = re.sub(r"(?m)^APP_VERSION_NAME=.*$", "APP_VERSION_NAME=" + version, text)
+    for key, value in {'APP_PACKAGE': 'io.github.lubara7.tgmax', 'APP_VERSION_NAME': release['version'], 'APP_VERSION_CODE': str(release['versionCode'])}.items():
+        text = re.sub(r"(?m)^" + key + r"=.*$", key + '=' + value, text)
     properties.write_text(text)
     variables = target / "TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java"
-    change(variables, "USE_CLOUD_STRINGS = true", "USE_CLOUD_STRINGS = false")
-    change(variables, "CHECK_UPDATES = true", "CHECK_UPDATES = false")
-    change(variables, "SUPPORTS_PASSKEYS = Build.VERSION.SDK_INT >= 34", "SUPPORTS_PASSKEYS = false")
-    add_after_opening(variables, r"public static synchronized void loadLogsEnabled\(Context context\)",
-                      f"        if ({JAVA_PREFIX}TgMaxRuntime.enabled()) {{ LOGS_ENABLED = false; return; }}\n")
-    manifest = target / "TMessagesProj/src/main/AndroidManifest.xml"
-    text = manifest.read_text()
-    text = re.sub(r'android:allowBackup="[^"]*"', 'android:allowBackup="false"', text)
-    text = text.replace("<application", '<application android:allowBackup="false"', 1) if 'android:allowBackup=' not in text else text
-    manifest.write_text(text)
-    values = target / "TMessagesProj/src/main/res/values/strings.xml"
-    text = values.read_text()
-    text = re.sub(r'(<string name="AppName"[^>]*>).*?(</string>)', r'\g<1>MAXGRAM CLIENT\2', text)
-    values.write_text(text)
+    text = variables.read_text().replace('USE_CLOUD_STRINGS = true', 'USE_CLOUD_STRINGS = false').replace('CHECK_UPDATES = true', 'CHECK_UPDATES = false').replace('SUPPORTS_PASSKEYS = true', 'SUPPORTS_PASSKEYS = false')
+    text = re.sub(r'APP_ID = \d+;', 'APP_ID = 0;', text)
+    text = re.sub(r'APP_HASH = "[^"]*";', 'APP_HASH = "";', text)
+    text = text.replace('LOGS_ENABLED = BuildConfig.DEBUG_VERSION', 'LOGS_ENABLED = false')
+    text = text.replace('LOGS_ENABLED = DEBUG_VERSION || sharedPreferences.getBoolean("logsEnabled", DEBUG_VERSION);', 'LOGS_ENABLED = false;')
+    variables.write_text(text)
+    for manifest in [target / 'TMessagesProj/src/main/AndroidManifest.xml', target / 'TMessagesProj/config/release/AndroidManifest_standalone.xml']:
+        text = manifest.read_text()
+        text = re.sub(r'android:allowBackup="[^"]*"', 'android:allowBackup="false"', text)
+        if 'android:allowBackup=' not in text:
+            text = text.replace('<application', '<application android:allowBackup="false"', 1)
+        manifest.write_text(text)
 
 
 def patch_password_login(target):
@@ -279,36 +282,26 @@ def isolate_client_services(target):
     java = target / "TMessagesProj/src/main/java"
     runtime = JAVA_PREFIX + "TgMaxRuntime"
     loader = java / "org/telegram/messenger/ApplicationLoader.java"
-    change(loader, '        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!NaConfig.INSTANCE.getDisableCrashlyticsCollection().Bool());',
-           f'        if (!{runtime}.enabled()) FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(false);')
-    add_after_opening(loader, r"private static void initPushServices\(\)", f"        if ({runtime}.enabled()) return;\n")
-    add_after_opening(loader, r"private static void startPushServiceInternal\(\)", f"        if ({runtime}.enabled()) return;\n")
+    add_after_opening(loader, r"private void initPushServices\(\)", f"        if ({runtime}.enabled()) return;\n")
+    add_after_opening(loader, r"public static void startPushService\(\)", f"        if ({runtime}.enabled()) return;\n")
     launch = java / "org/telegram/ui/LaunchActivity.java"
-    add_after_opening(launch, r"private BaseFragment getClientNotActivatedFragment\(\)",
-                      f"        if ({runtime}.enabled()) return new LoginActivity();\n")
-    drawer = java / "org/telegram/ui/Adapters/DrawerLayoutAdapter.java"
-    add_after_opening(drawer, r"public static Item buildItemForId\(int id\)",
-                      f"        if ({runtime}.enabled() && (id == nkbtnQrLogin || id == 15 || id == nkbtnFeed)) return null;\n")
+    add_after_opening(launch, r"private BaseFragment getClientNotActivatedFragment\(\)", f"        if ({runtime}.enabled()) return new LoginActivity();\n")
+    add_after_opening(java / "org/telegram/messenger/BillingController.java", r"public void startConnection\(\)",
+                      f"        if ({runtime}.enabled()) return;\n")
+    for relative in ['PremiumPreviewFragment.java', 'Stars/StarsIntroActivity.java', 'TON/TONIntroActivity.java', 'Wallet/WalletActivity.java']:
+        path = java / 'org/telegram/ui' / relative
+        if 'public boolean onFragmentCreate()' in path.read_text():
+            add_after_opening(path, r'public boolean onFragmentCreate\(\)', f'        if ({runtime}.enabled()) return false;\n')
+        else:
+            add_after_opening(path, r'public class \w+ extends [^{]+', '\n    @Override public boolean onFragmentCreate() { return false; }\n')
 
 
 def restrict_max_ui(target):
     java = target / "TMessagesProj/src/main/java/org/telegram"
     ui = java / "ui"
     phone = ui / "LoginActivity.java"
-    src = phone.read_text()
-    start = src.index("        moreButtonView.setIcon(R.drawable.ic_ab_other);")
-    end = src.index("        sizeNotifierFrameLayout.addView(moreButtonView", start)
-    src = src[:start] + """        moreButtonView.setIcon(R.drawable.maxgram_help);
-        moreButtonView.setContentDescription(getString(R.string.TgMaxHelp));
-        moreButtonView.setOnClickListener(view -> org.telegram.messenger.browser.Browser.openUrl(getParentActivity(), "https://max.ru/support"));
-""" + src[end:]
-    phone.write_text(src)
-    change(phone, "moreButtonView.setVisibility(activityMode == MODE_LOGIN && currentViewNum == VIEW_PHONE_INPUT ? View.VISIBLE : View.GONE);",
-           "moreButtonView.setVisibility(activityMode == MODE_LOGIN && currentViewNum == VIEW_PHONE_INPUT ? View.VISIBLE : View.GONE); updateMaxLoginControls();", 3)
     runtime = JAVA_PREFIX + "TgMaxRuntime"
     add_after_opening(phone, r"public void fillNumber\(\)", f"        if ({runtime}.enabled()) return;\n")
-    add_after_opening(phone, r"public void setPage\(@ViewNumber int page, boolean animated, Bundle params, boolean back\)",
-                      "        if (page == VIEW_QR_LOGIN) return;\n")
     anchor = "            TelephonyManager tm = "
     src = phone.read_text()
     start = src.index("public void onNextPressed(String code)", src.index("public class PhoneView"))
@@ -347,44 +340,37 @@ def restrict_max_ui(target):
             }}
 """ + src[pos:]
     phone.write_text(src)
+    text = phone.read_text()
+    text = re.sub(r'proxyButtonView.setVisibility\([^;]+;', 'proxyButtonView.setVisibility(View.GONE);', text)
+    phone.write_text(text)
     data = ui / "DataSettingsActivity.java"
     for row in ("proxySectionRow", "proxyRow", "proxySection2Row"):
         change(data, row + " = rowCount++;", row + " = -1;")
-    change(ui / "DialogsActivity.java", "final boolean proxyVisible = !SharedConfig.proxyList.isEmpty();",
-           "final boolean proxyVisible = false;")
-    profile = ui / "ProfileActivity.java"
-    source = profile.read_text()
-    lines = [line for line in source.splitlines(keepends=True) if 'new SearchResult(220,' in line and 'ProxyListActivity' in line]
-    if len(lines) != 1: raise RuntimeError("Missing proxy search item")
-    change(profile, lines[0], "")
-    add_after_opening(java / "messenger/AndroidUtilities.java", r"public static void showProxyAlert\(Activity activity, final ProxySettings settings\)",
-                      f"        if ({runtime}.enabled()) return;\n")
-    add_after_opening(ui / "ProxyListActivity.java", r"public boolean onFragmentCreate\(\)",
-                      f"        if ({runtime}.enabled()) return false;\n")
-    change(ui / "ProxySettingsActivity.java", "public class ProxySettingsActivity extends BaseFragment {",
-           "public class ProxySettingsActivity extends BaseFragment {\n    @Override public boolean onFragmentCreate() { return false; }")
-    for row in ("nekoRow", "nekoSectionRow", "filtersRow"):
-        change(profile, row + " = rowCount++;", row + " = -1;")
-    change(profile, "boolean hidePremium = NaConfig.INSTANCE.getHidePremiumSection().Bool();", "boolean hidePremium = true;")
-    change(profile, "boolean hideHelp = NaConfig.INSTANCE.getHideHelpSection().Bool();", "boolean hideHelp = true;")
-    anchor = "            ArrayList<SettingsSearchResult> nagramSettings = SettingsHelper.onCreateSearchArray("
-    change(profile, anchor, f"""            if ({runtime}.enabled()) {{
-                return Arrays.stream(arr).filter(item -> item != null && (item.guid == 108 || item.guid == 110 ||
-                        item.guid == 502 || item.guid == 400 || item.guid == 300 || item.guid == 301 ||
-                        item.guid == 900 || (item.guid >= 202 && item.guid <= 205)))
-                        .toArray(SearchResult[]::new);
-            }}
-{anchor}""")
-    add_after_opening(profile, r"public void loadFaqWebPage\(\)", f"        if ({runtime}.enabled()) return;\n")
-    drawer = ui / "Adapters/DrawerLayoutAdapter.java"
-    change(drawer, "(id == nkbtnQrLogin || id == 15 || id == nkbtnFeed)",
-           "(id != 16 && id != 6 && id != 8 && id != nkbtnSessions && id != nkbtnRestartApp && id != nkbtnMainTabsCustomize && id != nkbtnBrowser && id != nkbtnArchivedChats)")
+    dialogs = ui / "DialogsActivity.java"
+    text = dialogs.read_text()
+    text = re.sub(r'final boolean proxyVisible = [^;]+;', 'final boolean proxyVisible = false;', text)
+    dialogs.write_text(text)
+    add_after_opening(java / "messenger/AndroidUtilities.java", r"public static void showProxyAlert\(Activity activity, final ProxySettings settings\)", f"        if ({runtime}.enabled()) return;\n")
+    add_after_opening(ui / "ProxyListActivity.java", r"public boolean onFragmentCreate\(\)", f"        if ({runtime}.enabled()) return false;\n")
+    change(ui / "ProxySettingsActivity.java", "public class ProxySettingsActivity extends BaseFragment {", "public class ProxySettingsActivity extends BaseFragment {\n    @Override public boolean onFragmentCreate() { return false; }")
+    settings = ui / 'SettingsActivity.java'
+    text = settings.read_text()
+    text = text.replace('if (walletAbove && getMessagesController().config.walletAvailable.get())', 'if (false)')
+    a = text.index('        items.add(UItem.asShadow(null));\n        if (!walletAbove')
+    b = text.index('        items.add(UItem.asHeader(getString(R.string.SettingsHelp)))', a)
+    text = text[:a] + '\n        items.add(UItem.asShadow(null));\n        items.add(SettingCell.Factory.of(1100, 0xFF7189FF, 0xFF5267DB, R.drawable.settings_privacy, getString(R.string.TgMaxLocalSettings)));\n        items.add(SettingCell.Factory.of(15, 0xFFF45255, 0xFFDF3955, R.drawable.settings_business, getString(R.string.TelegramBusiness)));\n        items.add(UItem.asShadow(null));\n' + text[b:]
+    text = text.replace('presentSettingFragment(new PremiumPreviewFragment(PremiumPreviewFragment.FEATURES_BUSINESS, "settings"));', 'Browser.openUrl(getParentActivity(), "https://business.max.ru/");')
+    text = text.replace('            case 11:', f'            case 1100:\n                presentSettingFragment(new {JAVA_PREFIX}TgMaxSettingsActivity(currentAccount));\n                break;\n            case 11:')
+    text = text.replace('showDialog(AlertsCreator.createSupportAlert(this, resourceProvider));', 'Browser.openUrl(getParentActivity(), "https://max.ru/support");')
+    text = text.replace('LocaleController.getString(R.string.TelegramFaqUrl)', '"https://max.ru/support"')
+    text = text.replace('Browser.openUrl(getParentActivity(), "https://telegram.org/privacy");', 'Browser.openUrl(getParentActivity(), "https://legal.max.ru/pp");')
+    settings.write_text(text)
 
 
 def configure_phone_login(target):
     ui = target / "TMessagesProj/src/main/java/org/telegram/ui"
     login = ui / "LoginActivity.java"
-    rows = json.loads((ROOT / "integrations/nagram/login-countries.json").read_text())
+    rows = json.loads((ROOT / "integrations/telegram/login-countries.json").read_text())
     if len(rows) != 44 or len({item["iso"] for item in rows}) != 44:
         raise RuntimeError("Expected the 44 supported login countries")
     asset = target / "TMessagesProj/src/main/assets/countries.txt"
@@ -438,15 +424,17 @@ def configure_phone_login(target):
                 return;
             }}
 """)
-    hooks = (ROOT / "integrations/nagram/login-hooks.java.txt").read_text()
+    hooks = (ROOT / "integrations/telegram/login-hooks.java.txt").read_text()
     add_after_opening(login, r"public class LoginActivity extends BaseFragment[^{{]*", hooks)
     add_after_opening(login, r"public View createView\(Context context\)", f"""        {runtime}.get(currentAccount).setCaptchaHandler(maxCaptchaHandler);
 """)
-    change(login, '        moreButtonView = new ActionBarMenuItem(', '        setupMaxLoginControls(context);\n        moreButtonView = new ActionBarMenuItem(')
+    change(login, '        floatingButton.addAdditionalView(floatingButtonIcon);',
+           '        floatingButton.addAdditionalView(floatingButtonIcon);\n        setupMaxLoginControls(context);')
     change(login, 'floatingButton.setContentDescription(getString(R.string.Done));',
            'floatingButton.setContentDescription(getString(R.string.Continue));')
     change(login, '                super.onMeasure(widthMeasureSpec, heightMeasureSpec);\n            }\n        };\n        sizeNotifierFrameLayout.setDelegate',
            '                layoutMaxLoginControls(keyboardOffset, statusBarHeight);\n                super.onMeasure(widthMeasureSpec, heightMeasureSpec);\n            }\n        };\n        sizeNotifierFrameLayout.setDelegate')
+    change(login, '        currentViewNum = page;', '        currentViewNum = page;\n        updateMaxLoginControls();', 2)
     add_after_opening(login, r"private void fillNextCodeParams\(Bundle params, TLRPC.auth_SentCode res, boolean animate\)",
         f"""        if (res instanceof {runtime}.CallSentCode) {{
             showDoneButton(false, true);
@@ -528,7 +516,7 @@ def install_max_assets(target):
     import base64
     import gzip
     resources = target / "TMessagesProj/src/main/res"
-    source = ROOT / "integrations/nagram/resources"
+    source = ROOT / "integrations/telegram/resources"
     shutil.copytree(source, resources, dirs_exist_ok=True)
     for path in resources.rglob("*.b64"):
         path.with_suffix("").write_bytes(base64.b64decode(path.read_text()))
@@ -536,10 +524,10 @@ def install_max_assets(target):
     for path in resources.rglob("*.json.gz"):
         path.with_suffix("").write_bytes(gzip.decompress(path.read_bytes()))
         path.unlink()
-    manifest = target / "TMessagesProj/src/main/AndroidManifest.xml"
-    text = re.sub(r'android:(icon|roundIcon)="@mipmap/[^"]+"',
-                  lambda m: 'android:' + m[1] + '="@mipmap/maxgram_launcher"', manifest.read_text())
-    manifest.write_text(text)
+    for manifest in [target / "TMessagesProj/src/main/AndroidManifest.xml", target / "TMessagesProj/config/release/AndroidManifest_standalone.xml"]:
+        text = re.sub(r'android:(icon|roundIcon)="@mipmap/[^"]+"',
+                      lambda m: 'android:' + m[1] + '="@mipmap/maxgram_launcher"', manifest.read_text())
+        manifest.write_text(text)
     for style in resources.rglob("styles.xml"):
         text = style.read_text()
         text = re.sub(r'(<item name="android:windowSplashScreenAnimatedIcon">)[^<]+(</item>)',
@@ -549,15 +537,15 @@ def install_max_assets(target):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", type=Path, default=ROOT / "upstream/nagramxf")
-    parser.add_argument("--output", type=Path, default=ROOT / "build/nagram-client")
+    parser.add_argument("--source", type=Path, default=ROOT / "upstream/telegram")
+    parser.add_argument("--output", type=Path, default=ROOT / "build/telegram-client")
     args = parser.parse_args()
     source, output = args.source.resolve(), args.output.resolve()
-    lock = json.loads((ROOT / "upstream.lock.json").read_text())["sources"]["nagramxf"]
+    lock = json.loads((ROOT / "upstream.lock.json").read_text())["sources"]["telegram"]
     if not (source / ".git").exists():
-        raise SystemExit("Initialize upstream/nagramxf first: git submodule update --init --depth 1 upstream/nagramxf")
+        raise SystemExit("Initialize upstream/telegram first: git submodule update --init --depth 1 upstream/telegram")
     if run("git", "rev-parse", "HEAD", cwd=source) != lock["commit"]:
-        raise SystemExit("NagramXF checkout does not match upstream.lock.json")
+        raise SystemExit("Telegram checkout does not match upstream.lock.json")
     if output.exists():
         raise SystemExit("Output already exists. Choose a new --output; existing edits were preserved.")
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -571,16 +559,27 @@ def main():
     isolate_client_services(output)
     restrict_max_ui(output)
     configure_phone_login(output)
-    shutil.copytree(ROOT / "integrations/nagram/src/main/java", output / "TMessagesProj/src/main/java", dirs_exist_ok=True)
-    shutil.copytree(ROOT / "integrations/nagram/src/main/assets", output / "TMessagesProj/src/main/assets", dirs_exist_ok=True)
-    for helper in (ROOT / "integrations/nagram/ui").glob("*.java"):
-        shutil.copy2(helper, output / "TMessagesProj/src/main/java/io/github/lubara7/tgmax/nagram" / helper.name)
+    shutil.copytree(ROOT / "integrations/telegram/src/main/java", output / "TMessagesProj/src/main/java", dirs_exist_ok=True)
+    shutil.copytree(ROOT / "integrations/telegram/src/main/assets", output / "TMessagesProj/src/main/assets", dirs_exist_ok=True)
+    for helper in (ROOT / "integrations/telegram/ui").glob("*.java"):
+        shutil.copy2(helper, output / "TMessagesProj/src/main/java/io/github/lubara7/tgmax/telegram" / helper.name)
+    image_location = output / "TMessagesProj/src/main/java/org/telegram/messenger/ImageLocation.java"
+    add_after_opening(image_location, r"public static ImageLocation getForUser\(int currentAccount, TLRPC.User user, int type\)", f"""        if (user != null && type != TYPE_STRIPPED && type != TYPE_VIDEO_BIG && type != TYPE_VIDEO_SMALL) {{
+            String maxUrl = {JAVA_PREFIX}TgMaxRuntime.get(currentAccount).avatarUrl(user.id);
+            if (!maxUrl.isEmpty()) return ImageLocation.getForPath(maxUrl);
+        }}
+""")
+    add_after_opening(image_location, r"public static ImageLocation getForChat\(int currentAccount, TLRPC.Chat chat, int type\)", f"""        if (chat != null && type != TYPE_STRIPPED && type != TYPE_VIDEO_BIG && type != TYPE_VIDEO_SMALL) {{
+            String maxUrl = {JAVA_PREFIX}TgMaxRuntime.get(currentAccount).chatAvatarUrl(chat.id);
+            if (!maxUrl.isEmpty()) return ImageLocation.getForPath(maxUrl);
+        }}
+""")
     install_max_assets(output)
     verify_guards(output, native_names)
-    report = {"nagram_commit": lock["commit"], "network_entrypoints_guarded": len(native_names),
+    report = {"telegram_commit": lock["commit"], "network_entrypoints_guarded": len(native_names),
               "removed_locale_directories": removed, "native_apk_verified": False}
     (output / "TGMAX_CHANGES.json").write_text(json.dumps(report, indent=2) + "\n")
-    (output / "TGMAX_CHANGES.md").write_text("MAXGRAM CLIENT modifies this NagramXF checkout to use the Komet-derived MAX backend.\nSee the parent project's SOURCE_PROVENANCE.md and docs/nagram-migration.md.\nUpstream copyright and GPL notices are retained.\n")
+    (output / "TGMAX_CHANGES.md").write_text("MAXGRAM CLIENT modifies this Telegram checkout to use the Komet-derived MAX backend.\nSee the parent project's SOURCE_PROVENANCE.md and docs/telegram-migration.md.\nUpstream copyright and GPL notices are retained.\n")
     print(json.dumps({"client_directory": str(output), **report}, indent=2))
 
 

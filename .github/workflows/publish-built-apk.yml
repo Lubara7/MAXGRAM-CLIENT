@@ -43,7 +43,7 @@ jobs:
           key: tgmax-alpha-debug-keystore-v2
       - uses: actions/download-artifact@v6
         with:
-          name: tgmax-nagram-apk
+          name: tgmax-telegram-apk
           path: dist
           run-id: ${{ env.BUILD_RUN_ID }}
           github-token: ${{ github.token }}

@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths: ['.github/workflows/apk-smoke.yml', 'scripts/check_phone_ui.py', 'scripts/CodecInstrumentation.java', 'scripts/codec-test-AndroidManifest.xml', 'scripts/CodecDeviceSmoke.java']
   workflow_run:
-    workflows: ["Nagram APK release", "Publish built APK"]
+    workflows: ["Telegram APK release", "Publish built APK"]
     types: [completed]
     branches: [main]
 permissions:
@@ -83,6 +83,7 @@ jobs:
           adb shell am instrument -w io.github.lubara7.tgmax.codectest/io.github.lubara7.tgmax.codectest.CodecInstrumentation | tee codec-smoke.txt || true
           adb logcat -d > codec-logcat.txt
           grep -F 'INSTRUMENTATION_RESULT: codec_check=passed' codec-smoke.txt
+          grep -F 'INSTRUMENTATION_RESULT: features_check=passed' codec-smoke.txt
           SCRIPT
       - name: Install and open phone login
         uses: reactivecircus/android-emulator-runner@v2

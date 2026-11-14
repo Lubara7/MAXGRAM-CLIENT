@@ -5,9 +5,9 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
-parser.add_argument('--client', type=Path, default=ROOT / 'build/nagram-client')
+parser.add_argument('--client', type=Path, default=ROOT / 'build/telegram-client')
 client = parser.parse_args().client
-expected = json.loads((ROOT / 'integrations/nagram/login-countries.json').read_text())
+expected = json.loads((ROOT / 'integrations/telegram/login-countries.json').read_text())
 actual = [line.split(';') for line in (client / 'TMessagesProj/src/main/assets/countries.txt').read_text().splitlines()]
 assert len(expected) == len(actual) == 44
 assert [(row[1], row[0], row[2]) for row in actual] == [(row['iso'], row['code'], row['name']) for row in expected]
@@ -39,8 +39,10 @@ print('MAXGRAM name, seven login translations, help, legal footer and call scree
 
 assert 'syncContactsBox.setVisibility(View.GONE);' in login
 assert 'setPadding(0, dp(32), 0, dp(80));' in login
-for qualifier in ['values-v31', 'values-night-v31']:
-    assert '@mipmap/maxgram_launcher' in (resources / qualifier / 'styles.xml').read_text()
+assert '@mipmap/maxgram_launcher' in (resources / 'values-v31/styles.xml').read_text()
+for style in resources.rglob('styles.xml'):
+    if 'windowSplashScreenAnimatedIcon' in style.read_text():
+        assert '@mipmap/maxgram_launcher' in style.read_text()
 print('Compact login layout, hidden contact sync and MAX splash artwork checked')
 
 app_build = (client / 'TMessagesProj/build.gradle').read_text()
@@ -51,3 +53,21 @@ assert 'testImplementation("com.github.luben:zstd-jni:1.5.7-7")' in backend_buil
 assert 'implementation("com.github.luben:zstd-jni:' not in backend_build
 assert '-keep class com.github.luben.zstd.** { *; }' in (client / 'TMessagesProj/proguard-rules.pro').read_text()
 print('Official Android Zstandard AAR, desktop JAR exclusion and JNI keep rules checked')
+
+assert 'TgMaxQrActivity' in login
+assert 'VIEW_QR_LOGIN' not in login
+assert 'maxQrButton' in login
+standalone = (client / 'TMessagesProj_AppStandalone/build.gradle').read_text()
+assert 'applicationIdSuffix ".web"' not in standalone
+assert 'output.versionCodeOverride = defaultConfig.versionCode' in standalone
+assert '@mipmap/maxgram_launcher' in (client / 'TMessagesProj/config/release/AndroidManifest_standalone.xml').read_text()
+settings = (client / 'TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java').read_text()
+fill = settings[settings.index('final boolean walletAbove'):settings.index('items.add(UItem.asHeader(getString(R.string.SettingsHelp)))')]
+assert all(label not in fill for label in ['R.string.TelegramPremium', 'R.string.TelegramStars', 'R.string.GramEarnings', 'R.string.SendAGift'])
+assert 'https://business.max.ru/' in settings
+assert 'TgMaxSettingsActivity' in settings
+assert not (client / 'TMessagesProj/src/main/java/tw/nekomimi').exists()
+for qualifier in ['values', 'values-ru', 'values-es', 'values-pt-rBR', 'values-uz', 'values-fr', 'values-be']:
+    strings = {s.get('name'): s.text for s in ET.parse(resources / qualifier / 'strings.xml').findall('string')}
+    assert all(strings.get(key) for key in ['TgMaxQrTitle', 'TgMaxGhost', 'TgMaxUnread', 'TgMaxNoTyping', 'TgMaxUnknownUser'])
+print('Official Telegram base, MAX QR, local privacy settings and financial menu removal checked')

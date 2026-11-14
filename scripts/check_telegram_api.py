@@ -55,16 +55,16 @@ def write(path, text):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", type=Path, default=ROOT / "upstream/nagramxf")
+    parser.add_argument("--source", type=Path, default=ROOT / "upstream/telegram")
     parser.add_argument("--android-jar", type=Path)
-    parser.add_argument("--output", type=Path, default=ROOT / "build/nagram-api-check")
+    parser.add_argument("--output", type=Path, default=ROOT / "build/telegram-api-check")
     args = parser.parse_args()
     source = args.source.resolve()
-    lock = json.loads((ROOT / "upstream.lock.json").read_text())["sources"]["nagramxf"]
+    lock = json.loads((ROOT / "upstream.lock.json").read_text())["sources"]["telegram"]
     actual = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source, text=True).strip()
-    if actual != lock["commit"]: raise SystemExit("NagramXF pin mismatch")
+    if actual != lock["commit"]: raise SystemExit("Telegram pin mismatch")
     java = source / "TMessagesProj/src/main/java"
-    files = list((ROOT / "integrations/nagram/src/main/java").rglob("*.java"))
+    files = list((ROOT / "integrations/telegram/src/main/java").rglob("*.java"))
     adapter = "\n".join(p.read_text() for p in files)
     needed_fields = set(re.findall(r"\.(\w+)", adapter))
     namespaces = [(name, "org/telegram/tgnet/" + path + name + ".java") for name, path in
@@ -79,7 +79,7 @@ def main():
     while queue:
         qualified = queue.pop()
         if qualified in selected: continue
-        if qualified not in api: raise SystemExit(f"NagramXF has no {qualified}")
+        if qualified not in api: raise SystemExit(f"Telegram has no {qualified}")
         shape = api[qualified]
         fields = {k: v for k, v in shape["fields"].items() if k in needed_fields}
         selected[qualified] = {**shape, "fields": fields}
@@ -138,6 +138,7 @@ public class Utilities { public static DispatchQueue stageQueue;
     write(stubs / "org/telegram/messenger/LocaleController.java", """package org.telegram.messenger;
 import java.util.*;
 public class LocaleController {
+ public static String getString(int id) {return "";}
  public static String getLocaleStringIso639() {return "en";}
  public static LocaleController getInstance() {return null;}
  public Locale getCurrentLocale() {return Locale.ENGLISH;}
@@ -145,6 +146,7 @@ public class LocaleController {
  public HashMap<String,LocaleInfo> languagesDict,remoteLanguagesDict;
  public static class LocaleInfo {
 """ + locale_fields + "\n}\n}\n")
+    write(stubs / "org/telegram/messenger/R.java", "package org.telegram.messenger; public class R { public static class string { public static final int TgMaxUnknownUser=1; } }\n")
     android = args.android_jar
     if android is None:
         sdk = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
@@ -156,7 +158,7 @@ public class LocaleController {
                "-d", str(output / "classes"), *map(str, stubs.rglob("*.java")), *map(str, files)]
     subprocess.run(command, check=True)
     print(json.dumps({"pinned_api_classes_checked": len(selected), "integration_sources_compiled": len(files),
-                      "full_nagram_apk_built": False}, indent=2))
+                      "full_telegram_apk_built": False}, indent=2))
 
 
 if __name__ == "__main__":

@@ -15,7 +15,14 @@ public class CodecInstrumentation extends Instrumentation {
         Bundle result = new Bundle();
         try {
             CodecDeviceSmoke.verify(getTargetContext().getClassLoader());
+            java.util.concurrent.atomic.AtomicReference<Throwable> uiFailure = new java.util.concurrent.atomic.AtomicReference<>();
+            runOnMainSync(() -> {
+                try { CodecDeviceSmoke.verifyLocalFeatures(getTargetContext().getClassLoader()); }
+                catch (Throwable failure) { uiFailure.set(failure); }
+            });
+            if (uiFailure.get() != null) throw new IllegalStateException("Local feature check failed", uiFailure.get());
             result.putString("codec_check", "passed");
+            result.putString("features_check", "passed");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable failure) {
             result.putString("codec_check", "failed");

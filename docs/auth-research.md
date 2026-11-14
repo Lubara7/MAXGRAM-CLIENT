@@ -1,6 +1,6 @@
 # MAXGRAM CLIENT: authentication and source review
 
-The Android UI remains the pinned NagramXF source, derived from Telegram. The transport uses MAX binary WebSocket frames. Bot bridge projects are useful references for message mapping but cannot authenticate a user's MAX phone account.
+The Android UI now uses pinned official Telegram Android 13.2.2. NagramXF is a reference for selected local privacy behavior only. The transport uses MAX binary WebSocket frames. Bot bridge projects are useful references for message mapping but cannot authenticate a user's MAX phone account.
 
 | Source | Inspected implementation | Applied decision |
 |---|---|---|
@@ -22,6 +22,7 @@ Exact source revisions and asset hashes are in SOURCE_PROVENANCE.md and the asse
 | Help | Question mark in a circle at the existing Telegram top-right menu position, opening https://max.ru/support |
 | Legal footer | Privacy https://legal.max.ru/pp, agreement https://legal.max.ru/ps, recommendations https://legal.max.ru/recsysrules |
 | CAPTCHA | User-completed official VK challenge in a Telegram bottom sheet; verified origin/source bridge; cancellation sends no OTP request |
+| QR | Telegram-style QR screen with MAX 288/289/291, server TTL, cancellation and shared password completion |
 | OTP | Telegram code view after MAX returns a valid token and codeLength |
 | Outgoing call | Telegram colors/type/back button; server source track, destination phone, TTL and polling interval; system ACTION_DIAL |
 | Account password | Existing Telegram-style password view connected to MAX passwordChallenge |

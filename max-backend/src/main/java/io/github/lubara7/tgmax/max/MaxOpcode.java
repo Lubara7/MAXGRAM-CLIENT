@@ -26,6 +26,8 @@ public final class MaxOpcode {
     public static final int MESSAGE = 128;
     public static final int CHAT_UPDATE = 135;
     public static final int AUTH_CAPTCHA = 224;
+    public static final int AUTH_GET_QR = 288;
+    public static final int AUTH_QR_STATUS = 289;
     public static final int AUTH_BY_TRACK = 291;
     public static final int AUTH_CHECK_CALL = 294;
 

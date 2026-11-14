@@ -35,7 +35,7 @@ def tap(node):
 
 
 def assert_login_layout(nodes, strings, qualifier):
-    labels = json.loads(Path('integrations/nagram/auth-strings.json').read_text())[qualifier]
+    labels = json.loads(Path('integrations/telegram/auth-strings.json').read_text())[qualifier]
     policy = next(n for n in nodes if all(labels[k] in n.get('text', '') for k in ['TgMaxPrivacy', 'TgMaxTerms', 'TgMaxRecommendations']))
     phone = next(n for n in nodes if n.get('content-desc') == strings['phone_label'])
     done = next(n for n in nodes if n.get('content-desc') == strings['action_continue'])
@@ -53,6 +53,7 @@ try:
     assert any(n.get('text') == 'Check the country code and enter the phone number from your MAX account.' for n in nodes)
     Path('login.png').write_bytes(adb('exec-out', 'screencap', '-p'))
     assert any(n.get('content-desc') == 'Help' for n in nodes)
+    assert any(n.get('content-desc') == 'Log in by QR code' for n in nodes)
     assert any('privacy policy' in n.get('text', '') and 'user agreement' in n.get('text', '') for n in nodes)
     country = next(n for n in nodes if n.get('content-desc') == 'Country')
     tap(country.attrib)

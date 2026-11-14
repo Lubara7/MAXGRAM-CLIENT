@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const html = fs.readFileSync(new URL('../integrations/nagram/src/main/assets/tgmax-captcha.html', import.meta.url), 'utf8');
+const html = fs.readFileSync(new URL('../integrations/telegram/src/main/assets/tgmax-captcha.html', import.meta.url), 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1]
     .replace('__TGMAX_CONFIG__', JSON.stringify({ url: 'https://captcha.vk.com/synthetic', language: 'ru', dark: false }));
 function page() {

@@ -17,6 +17,20 @@ public final class MaxApi {
 
     public MaxApi(MaxClient client) { this.client = client; }
 
+    public CompletableFuture<MaxQrLogin.Params> requestQr() {
+        return client.request(MaxOpcode.AUTH_GET_QR, Maps.of()).thenApply(MaxQrLogin.Params::new);
+    }
+
+    public CompletableFuture<MaxQrLogin.Status> checkQr(String trackId) {
+        requireTrack(trackId);
+        return client.request(MaxOpcode.AUTH_QR_STATUS, Maps.of("trackId", trackId)).thenApply(MaxQrLogin.Status::new);
+    }
+
+    public CompletableFuture<Map<String, Object>> typing(long chatId, boolean cancel) {
+        if (cancel) return CompletableFuture.completedFuture(Maps.of());
+        return client.request(MaxOpcode.TYPING, Maps.of("chatId", chatId, "type", "TEXT"));
+    }
+
     public CompletableFuture<Map<String, Object>> requestCode(String phone, boolean resend) {
         return requestCode(phone, resend, link -> {
             CompletableFuture<String> missing = new CompletableFuture<>();

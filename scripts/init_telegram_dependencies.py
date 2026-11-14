@@ -6,6 +6,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = [
+    'TMessagesProj/lib/jlatexmath',
+    'TMessagesProj/jni/twidget/twidget',
+    'TMessagesProj/jni/twidget/widget-sandbox',
+    'TMessagesProj/jni/wallet-engine',
     'TMessagesProj_Modules/media',
     'TMessagesProj/jni/third_party/libyuv',
     'TMessagesProj/jni/third_party/absl',
@@ -28,11 +32,11 @@ MODULES = [
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('client', type=Path, nargs='?', default=ROOT / 'build/nagram-client')
+    parser.add_argument('client', type=Path, nargs='?', default=ROOT / 'build/telegram-client')
     args = parser.parse_args()
     client = args.client.resolve()
     actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=client, text=True).strip()
-    expected = json.loads((ROOT / 'upstream.lock.json').read_text())['sources']['nagramxf']['commit']
+    expected = json.loads((ROOT / 'upstream.lock.json').read_text())['sources']['telegram']['commit']
     if actual != expected:
         raise SystemExit('Prepared client revision differs from upstream.lock.json')
     subprocess.run(['git', 'submodule', 'update', '--init', '--depth', '1', '--jobs', '4', *MODULES], cwd=client, check=True)
