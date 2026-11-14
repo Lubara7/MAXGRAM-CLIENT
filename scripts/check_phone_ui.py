@@ -1,4 +1,5 @@
 import re
+import json
 import subprocess
 import time
 import xml.etree.ElementTree as ET
@@ -33,6 +34,20 @@ def tap(node):
     adb('shell', 'input', 'tap', str((left + right) // 2), str((top + bottom) // 2))
 
 
+def assert_login_layout(nodes, strings, qualifier):
+    labels = json.loads(Path('integrations/nagram/auth-strings.json').read_text())[qualifier]
+    policy = next(n for n in nodes if all(labels[k] in n.get('text', '') for k in ['TgMaxPrivacy', 'TgMaxTerms', 'TgMaxRecommendations']))
+    phone = next(n for n in nodes if n.get('content-desc') == strings['phone_label'])
+    done = next(n for n in nodes if n.get('content-desc') == strings['action_continue'])
+    def overlaps(first, second):
+        a, b, c, d = map(int, re.findall(r'\d+', first.get('bounds')))
+        x, y, z, w = map(int, re.findall(r'\d+', second.get('bounds')))
+        return min(c, z) > max(a, x) and min(d, w) > max(b, y)
+    assert not overlaps(policy, phone), 'Legal text overlaps the phone input'
+    assert not overlaps(policy, done), 'Legal text overlaps Continue'
+    assert not any('Sync Contacts' in n.get('text', '') for n in nodes)
+
+
 try:
     nodes = wait_for('login.xml', lambda rows: any(n.get('content-desc') == 'Phone number' for n in rows))
     assert any(n.get('text') == 'Check the country code and enter the phone number from your MAX account.' for n in nodes)
@@ -65,6 +80,7 @@ try:
         assert any(n.get('text') == strings['phone_description'] for n in nodes)
         assert any(n.get('content-desc') == strings['country_title'] for n in nodes)
         assert any(n.get('text') == '7' for n in nodes)
+        assert_login_layout(nodes, strings, qualifier)
         Path(f'login-{qualifier}.png').write_bytes(adb('exec-out', 'screencap', '-p'))
         language_label = strings['language_title']
     print('Published MAXGRAM APK: phone copy, ordered countries, help, legal footer and seven language switches checked')

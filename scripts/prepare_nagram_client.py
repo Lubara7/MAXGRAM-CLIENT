@@ -397,6 +397,14 @@ def configure_phone_login(target):
     last = source.index("            if (codeField.length() == 0) {\n                setCountryButtonText(null);", first)
     source = source[:first] + source[last:]
     source = source.replace("country = list.get(list.size() - 1);", "country = list.get(0);")
+    phone_start = source.index("public class PhoneView")
+    phone_end = source.index("public class LoginActivitySmsView", phone_start)
+    phone = source[phone_start:phone_end]
+    phone = phone.replace("            setGravity(Gravity.CENTER);",
+                          "            setGravity(Gravity.CENTER);\n            setPadding(0, dp(32), 0, dp(80));", 1)
+    phone = phone.replace("                syncContactsBox = new CheckBoxCell(context, 2);",
+                          "                syncContactsBox = new CheckBoxCell(context, 2);\n                syncContacts = false;\n                syncContactsBox.setVisibility(View.GONE);", 1)
+    source = source[:phone_start] + phone + source[phone_end:]
     login.write_text(source)
     runtime = JAVA_PREFIX + "TgMaxRuntime"
     add_after_opening(login, r"private void loadCountries\(\)", f"        if ({runtime}.enabled()) return;\n")
@@ -429,6 +437,8 @@ def configure_phone_login(target):
     add_after_opening(login, r"public View createView\(Context context\)", f"""        {runtime}.get(currentAccount).setCaptchaHandler(maxCaptchaHandler);
 """)
     change(login, '        moreButtonView = new ActionBarMenuItem(', '        setupMaxLoginControls(context);\n        moreButtonView = new ActionBarMenuItem(')
+    change(login, 'floatingButton.setContentDescription(getString(R.string.Done));',
+           'floatingButton.setContentDescription(getString(R.string.Continue));')
     change(login, '                super.onMeasure(widthMeasureSpec, heightMeasureSpec);\n            }\n        };\n        sizeNotifierFrameLayout.setDelegate',
            '                layoutMaxLoginControls(keyboardOffset, statusBarHeight);\n                super.onMeasure(widthMeasureSpec, heightMeasureSpec);\n            }\n        };\n        sizeNotifierFrameLayout.setDelegate')
     add_after_opening(login, r"private void fillNextCodeParams\(Bundle params, TLRPC.auth_SentCode res, boolean animate\)",
@@ -524,6 +534,11 @@ def install_max_assets(target):
     text = re.sub(r'android:(icon|roundIcon)="@mipmap/[^"]+"',
                   lambda m: 'android:' + m[1] + '="@mipmap/maxgram_launcher"', manifest.read_text())
     manifest.write_text(text)
+    for style in resources.rglob("styles.xml"):
+        text = style.read_text()
+        text = re.sub(r'(<item name="android:windowSplashScreenAnimatedIcon">)[^<]+(</item>)',
+                      r'\g<1>@mipmap/maxgram_launcher\2', text)
+        style.write_text(text)
 
 
 def main():
