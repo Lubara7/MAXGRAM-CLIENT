@@ -1,8 +1,11 @@
-package io.github.lubara7.tgmax.nagram;
+package io.github.lubara7.tgmax.telegram;
 
 import io.github.lubara7.tgmax.max.Maps;
 import io.github.lubara7.tgmax.max.MaxException;
 import io.github.lubara7.tgmax.max.StableIds;
+import io.github.lubara7.tgmax.max.MaxContactProfile;
+import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.R;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -26,8 +29,13 @@ final class TgMaxModels {
             contacts.put(self, profile);
             ids.user(self);
         }
-        for (Map<String, Object> contact : Maps.objects(data.get("contacts")))
-            if (contact.get("id") != null) contacts.put(Maps.number(contact.get("id")), contact);
+        for (Map<String, Object> contact : Maps.objects(data.get("contacts"))) {
+            if (contact.get("id") == null) continue;
+            long id = Maps.number(contact.get("id"));
+            Map<String, Object> merged = new LinkedHashMap<>(contacts.getOrDefault(id, Collections.emptyMap()));
+            merged.putAll(contact);
+            contacts.put(id, merged);
+        }
         for (Map<String, Object> chat : Maps.objects(data.get("chats"))) {
             long id = Maps.number(chat.get("id"));
             chats.put(id, chat);
@@ -59,18 +67,45 @@ final class TgMaxModels {
         user.id = ids.user(rawId);
         user.self = rawId == self;
         Map<String, Object> contact = contacts.getOrDefault(rawId, Collections.emptyMap());
-        List<Map<String, Object>> names = Maps.objects(contact.get("names"));
-        Map<String, Object> name = names.isEmpty() ? contact : names.get(0);
-        for (Map<String, Object> candidate : names) if ("ONEME".equals(candidate.get("type"))) name = candidate;
-        user.first_name = Maps.string(name.get("firstName"));
-        if (user.first_name.isEmpty()) user.first_name = Maps.string(name.get("name"));
-        if (user.first_name.isEmpty()) user.first_name = "MAX " + rawId;
-        user.last_name = Maps.string(name.get("lastName"));
+        MaxContactProfile profile = new MaxContactProfile(contact);
+        user.first_name = profile.firstName;
+        user.last_name = profile.lastName;
+        if (user.first_name.isEmpty() && user.last_name.isEmpty())
+            user.first_name = LocaleController.getString(R.string.TgMaxUnknownUser);
         user.flags = 2;
         if (!user.last_name.isEmpty()) user.flags |= 4;
-        user.photo = new TLRPC.TL_userProfilePhotoEmpty();
+        user.phone = profile.phone;
+        if (!user.phone.isEmpty()) user.flags |= 16;
+        if (profile.avatarUrl.isEmpty()) user.photo = new TLRPC.TL_userProfilePhotoEmpty();
+        else {
+            user.photo = new TLRPC.TL_userProfilePhoto();
+            user.photo.photo_id = profile.photoId == 0 ? rawId : profile.photoId;
+            user.photo.photo_small = new TLRPC.TL_fileLocationToBeDeprecated();
+            user.photo.photo_small.volume_id = -user.photo.photo_id;
+            user.photo.photo_small.local_id = 97;
+            user.photo.photo_big = user.photo.photo_small;
+        }
         user.flags |= 32;
         return user;
+    }
+
+    synchronized List<Long> missingContacts() {
+        List<Long> result = new ArrayList<>();
+        for (Map.Entry<Long, Map<String, Object>> entry : contacts.entrySet())
+            if (!new MaxContactProfile(entry.getValue()).hasName()) result.add(entry.getKey());
+        return result;
+    }
+
+    synchronized String avatarUrl(long localId) {
+        try { return new MaxContactProfile(contacts.getOrDefault(ids.maxUser(localId), Collections.emptyMap())).avatarUrl; }
+        catch (MaxException missing) { return ""; }
+    }
+
+    synchronized String chatAvatarUrl(long localId) {
+        try {
+            Map<String, Object> raw = chats.getOrDefault(ids.serverChat(-localId), Collections.emptyMap());
+            return new MaxContactProfile(Maps.of("baseUrl", raw.get("baseIconUrl"))).avatarUrl;
+        } catch (MaxException missing) { return ""; }
     }
 
     synchronized TLRPC.Chat chat(Map<String, Object> raw) {
@@ -91,6 +126,16 @@ final class TgMaxModels {
         chat.title = Maps.string(raw.get("title"));
         if (chat.title.isEmpty()) chat.title = "MAX";
         chat.photo = new TLRPC.TL_chatPhotoEmpty();
+        String icon = new MaxContactProfile(Maps.of("baseUrl", raw.get("baseIconUrl"))).avatarUrl;
+        if (!icon.isEmpty()) {
+            chat.photo = new TLRPC.TL_chatPhoto();
+            chat.photo.photo_id = Integer.toUnsignedLong(icon.hashCode());
+            if (chat.photo.photo_id == 0) chat.photo.photo_id = maxId;
+            chat.photo.photo_small = new TLRPC.TL_fileLocationToBeDeprecated();
+            chat.photo.photo_small.volume_id = -chat.photo.photo_id;
+            chat.photo.photo_small.local_id = 97;
+            chat.photo.photo_big = chat.photo.photo_small;
+        }
         chat.date = (int) (Maps.number(raw.get("created"), 0) / 1000);
         chat.version = 1;
         chat.participants_count = Math.toIntExact(Maps.number(raw.get("participantsCount"), 0));

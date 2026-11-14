@@ -1,4 +1,4 @@
-package io.github.lubara7.tgmax.nagram;
+package io.github.lubara7.tgmax.telegram;
 
 import android.content.Context;
 import android.os.Build;
@@ -30,6 +30,8 @@ public final class TgMaxRuntime {
     private final TgMaxModels models;
     private final MaxClient client;
     private final MaxApi api;
+    private final android.content.SharedPreferences privacyPreferences;
+    private volatile MaxPrivacyPolicy privacy;
     private final ExecutorService executor;
     private final Map<Integer, CompletableFuture<?>> requests = new ConcurrentHashMap<>();
     private final Map<Integer, Integer> guids = new ConcurrentHashMap<>();
@@ -73,6 +75,9 @@ public final class TgMaxRuntime {
     private TgMaxRuntime(int account) {
         this.account = account;
         Context context = ApplicationLoader.applicationContext;
+        privacyPreferences = context.getSharedPreferences("max_privacy_" + account, Context.MODE_PRIVATE);
+        privacy = new MaxPrivacyPolicy(privacyPreferences.getBoolean("ghost", false),
+                privacyPreferences.getBoolean("unread", false), privacyPreferences.getBoolean("noTyping", false));
         local = new MaxLocalState(context, account);
         ids = new StableIds(local);
         models = new TgMaxModels(ids);
@@ -82,6 +87,7 @@ public final class TgMaxRuntime {
                 "Android " + Build.VERSION.RELEASE, display.widthPixels + "x" + display.heightPixels,
                 TimeZone.getDefault().getID(), "MAXGRAM-CLIENT/0.2 Android/" + Build.VERSION.SDK_INT);
         client = new MaxClient(new OkHttpClient.Builder().connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS).build(), device);
+        client.setPrivacy(privacy);
         api = new MaxApi(client);
         client.addPushListener(frame -> executor.execute(() -> {
             try { push(frame); }
@@ -92,6 +98,23 @@ public final class TgMaxRuntime {
             if (!connected) { login = null; allDialogs = null; }
         });
     }
+
+    public MaxPrivacyPolicy privacy() { return privacy; }
+    public void privacy(MaxPrivacyPolicy policy) {
+        privacy = policy;
+        client.setPrivacy(policy);
+        privacyPreferences.edit().putBoolean("ghost", policy.ghost).putBoolean("unread", policy.unread)
+                .putBoolean("noTyping", policy.noTyping).apply();
+    }
+
+    public String avatarUrl(long userId) { return models.avatarUrl(userId); }
+    public String chatAvatarUrl(long chatId) { return models.chatAvatarUrl(chatId); }
+    public CompletableFuture<MaxQrLogin.Params> requestQr() {
+        passwordTrack = null;
+        authPhone = "";
+        return api.requestQr();
+    }
+    public CompletableFuture<MaxQrLogin.Status> checkQr(String track) { return api.checkQr(track); }
 
     public void send(int token, TLObject request, RequestDelegate callback, RequestDelegateTimestamp timestamp,
                      QuickAckDelegate quickAck, WriteToSocketDelegate written) {
@@ -135,6 +158,7 @@ public final class TgMaxRuntime {
     public void cleanup(boolean reset) {
         requests.keySet().forEach(this::cancel);
         if (reset) {
+            privacyPreferences.edit().clear().apply();
             local.clear();
             client.close();
             executor.shutdownNow();
@@ -174,6 +198,14 @@ public final class TgMaxRuntime {
     }
 
     private CompletableFuture<TLObject> authenticated(TLObject request) {
+        if (request instanceof TLRPC.TL_messages_setTyping) {
+            TLRPC.TL_messages_setTyping r = (TLRPC.TL_messages_setTyping) request;
+            return api.typing(serverChat(r.peer), r.action instanceof TLRPC.TL_sendMessageCancelAction)
+                    .thenApply(data -> new TLRPC.TL_boolTrue());
+        }
+        if (request instanceof TL_account.updateStatus) {
+            return client.activity(!((TL_account.updateStatus) request).offline).thenApply(data -> new TLRPC.TL_boolTrue());
+        }
         if (request instanceof TL_account.getAuthorizations) {
             return api.sessions().thenApply(TgMaxModels::sessions);
         }
@@ -352,7 +384,7 @@ public final class TgMaxRuntime {
         return performLogin(token).thenApplyAsync(unused -> {
             TLRPC.TL_auth_authorization auth = new TLRPC.TL_auth_authorization();
             auth.user = models.user(models.self);
-            auth.user.phone = authPhone.replace("+", "");
+            if (!authPhone.isEmpty()) auth.user.phone = authPhone.replace("+", "");
             if (!auth.user.phone.isEmpty()) auth.user.flags |= 16;
             passwordTrack = null;
             passwordHint = "";
@@ -375,8 +407,21 @@ public final class TgMaxRuntime {
     }
 
     private synchronized CompletableFuture<Void> loadDialogs() {
-        if (allDialogs == null) allDialogs = page(Maps.number(loginData.get("chatMarker"), 0), 0);
+        if (allDialogs == null) allDialogs = page(Maps.number(loginData.get("chatMarker"), 0), 0)
+                .thenComposeAsync(unused -> {
+                    models.dialogs();
+                    return hydrateContacts(models.missingContacts(), 0);
+                }, executor);
         return allDialogs;
+    }
+
+    private CompletableFuture<Void> hydrateContacts(List<Long> missing, int offset) {
+        if (offset >= missing.size()) return CompletableFuture.completedFuture(null);
+        int end = Math.min(missing.size(), offset + 100);
+        return api.contacts(new ArrayList<>(missing.subList(offset, end))).handleAsync((data, failure) -> {
+            if (failure == null) models.snapshot(data);
+            return null;
+        }, executor).thenComposeAsync(unused -> hydrateContacts(missing, end), executor);
     }
 
     private CompletableFuture<Void> page(long marker, int pages) {

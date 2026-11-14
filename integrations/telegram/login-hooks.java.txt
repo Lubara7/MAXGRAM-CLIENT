@@ -16,7 +16,7 @@
                 result.completeExceptionally(new io.github.lubara7.tgmax.max.MaxException("MAX_CAPTCHA_CANCELLED"));
                 return;
             }
-            io.github.lubara7.tgmax.nagram.TgMaxCaptcha captcha = new io.github.lubara7.tgmax.nagram.TgMaxCaptcha(
+            io.github.lubara7.tgmax.telegram.TgMaxCaptcha captcha = new io.github.lubara7.tgmax.telegram.TgMaxCaptcha(
                     getParentActivity(), link, LocaleController.getLocaleStringIso639(), Theme.isCurrentThemeDark());
             captcha.setMinimumHeight(Math.min(AndroidUtilities.dp(420), AndroidUtilities.displaySize.y * 2 / 3));
             AndroidUtilities.hideKeyboard(fragmentView);
@@ -40,6 +40,8 @@
     }
 
     private ImageView maxLanguageButton;
+    private ImageView maxHelpButton;
+    private ImageView maxQrButton;
     private TextView maxPolicy;
 
     private void setupMaxLoginControls(Context context) {
@@ -50,6 +52,17 @@
         maxLanguageButton.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector)));
         maxLanguageButton.setOnClickListener(v -> showMaxLanguages());
         sizeNotifierFrameLayout.addView(maxLanguageButton, LayoutHelper.createFrame(32, 32, Gravity.RIGHT | Gravity.TOP, 16, 16, 64, 16));
+        maxHelpButton = maxToolbarButton(context, R.drawable.maxgram_help, getString(R.string.TgMaxHelp), 16);
+        maxHelpButton.setOnClickListener(v -> org.telegram.messenger.browser.Browser.openUrl(getParentActivity(), "https://max.ru/support"));
+        maxQrButton = maxToolbarButton(context, R.drawable.header_qr_24, getString(R.string.TgMaxQrTitle), 112);
+        maxQrButton.setOnClickListener(v -> {
+            if (doneProgressVisible[DONE_TYPE_FLOATING] || getParentActivity() == null) return;
+            io.github.lubara7.tgmax.telegram.TgMaxRuntime.get(currentAccount).preparePhoneAuth(
+                    android.webkit.WebSettings.getDefaultUserAgent(getParentActivity()));
+            AndroidUtilities.hideKeyboard(fragmentView);
+            presentFragment(new io.github.lubara7.tgmax.telegram.TgMaxQrActivity(currentAccount,
+                    (result, failure) -> handleMaxVerification(new Bundle(), result, failure)));
+        });
         maxPolicy = new TextView(context);
         maxPolicy.setTextSize(11);
         maxPolicy.setGravity(Gravity.CENTER);
@@ -65,9 +78,21 @@
         updateMaxLoginControls();
     }
 
+    private ImageView maxToolbarButton(Context context, int icon, String label, int right) {
+        ImageView view = new ImageView(context);
+        view.setImageResource(icon);
+        view.setContentDescription(label);
+        view.setColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        view.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector)));
+        sizeNotifierFrameLayout.addView(view, LayoutHelper.createFrame(32, 32, Gravity.RIGHT | Gravity.TOP, 16, 16, right, 16));
+        return view;
+    }
+
     private void updateMaxLoginControls() {
         int visibility = activityMode == MODE_LOGIN && currentViewNum == VIEW_PHONE_INPUT ? View.VISIBLE : View.GONE;
         if (maxLanguageButton != null) maxLanguageButton.setVisibility(visibility);
+        if (maxHelpButton != null) maxHelpButton.setVisibility(visibility);
+        if (maxQrButton != null) maxQrButton.setVisibility(visibility);
         if (maxPolicy != null) maxPolicy.setVisibility(visibility);
     }
 
@@ -75,6 +100,8 @@
         if (maxLanguageButton != null) {
             ((android.view.ViewGroup.MarginLayoutParams) maxLanguageButton.getLayoutParams()).topMargin = dp(16) + statusBarHeight;
         }
+        if (maxHelpButton != null) ((android.view.ViewGroup.MarginLayoutParams) maxHelpButton.getLayoutParams()).topMargin = dp(16) + statusBarHeight;
+        if (maxQrButton != null) ((android.view.ViewGroup.MarginLayoutParams) maxQrButton.getLayoutParams()).topMargin = dp(16) + statusBarHeight;
         if (maxPolicy != null && maxPolicy.getVisibility() == View.VISIBLE) {
             ((android.view.ViewGroup.MarginLayoutParams) maxPolicy.getLayoutParams()).bottomMargin = dp(8) + keyboardOffset;
         }
@@ -98,7 +125,7 @@
         for (LocaleController.LocaleInfo language : LocaleController.getInstance().languages) {
             org.telegram.ui.Cells.LanguageCell cell = new org.telegram.ui.Cells.LanguageCell(context);
             cell.setLanguage(language, null, false);
-            cell.textView2.setText(io.github.lubara7.tgmax.nagram.TgMaxLocales.localizedName(language));
+            cell.textView2.setText(io.github.lubara7.tgmax.telegram.TgMaxLocales.localizedName(language));
             cell.setLanguageSelected(LocaleController.getInstance().getCurrentLocaleInfo() != null && language.shortName.equals(LocaleController.getInstance().getCurrentLocaleInfo().shortName), false);
             list.addView(cell, LayoutHelper.createLinear(-1, 60));
             cell.setOnClickListener(v -> {
@@ -124,12 +151,12 @@
     private void handleMaxVerification(Bundle params, TLObject result, Throwable failure) {
         if (getParentActivity() == null) return;
         if (failure != null) {
-            if (io.github.lubara7.tgmax.nagram.TgMaxRuntime.get(currentAccount).needsPassword()) {
+            if (io.github.lubara7.tgmax.telegram.TgMaxRuntime.get(currentAccount).needsPassword()) {
                 Bundle password = new Bundle();
                 password.putBoolean("max_password", true);
                 setPage(VIEW_PASSWORD, true, password, false);
             } else {
-                String error = io.github.lubara7.tgmax.nagram.TgMaxRuntime.errorText(failure);
+                String error = io.github.lubara7.tgmax.telegram.TgMaxRuntime.errorText(failure);
                 if (!error.equals("MAX_CAPTCHA_CANCELLED")) needShowAlert(getString(R.string.ErrorOccurred), maxAuthError(error));
             }
         } else if (result instanceof TLRPC.auth_SentCode) {

@@ -29,7 +29,7 @@ def source_filter(info):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--client', type=Path, default=ROOT / 'build/nagram-client')
+    parser.add_argument('--client', type=Path, default=ROOT / 'build/telegram-client')
     parser.add_argument('--output', type=Path, default=ROOT / 'dist')
     args = parser.parse_args()
     client, output = args.client.resolve(), args.output.resolve()
@@ -41,14 +41,13 @@ def main():
     if 'tgnet/NativeByteBuffer.cpp' not in graph or re.search(
             r'tgnet/(?:Connections?Manager|Connection(?:Socket|Session)?|Handshake|MTProtoScheme|Datacenter|TLSHello)\.cpp', graph):
         raise SystemExit('Unexpected native transport sources in the compiled APK build')
-    metadata = client / 'TMessagesProj/build/outputs/apk/normal/debug/output-metadata.json'
+    metadata = client / 'TMessagesProj_AppStandalone/build/outputs/apk/afat/debug/output-metadata.json'
     data = json.loads(metadata.read_text())
     if data['applicationId'] != 'io.github.lubara7.tgmax':
         raise SystemExit('Refusing to release an unexpected applicationId')
-    candidates = [element for element in data['elements'] if
-                  any(f.get('filterType') == 'ABI' and f.get('value') == release['abi'] for f in element.get('filters', []))]
+    candidates = data['elements']
     if len(candidates) != 1:
-        raise SystemExit('Expected exactly one ARM64 Nagram APK')
+        raise SystemExit('Expected exactly one ARM64 Telegram APK')
     element = candidates[0]
     if element['versionName'] != release['version']:
         raise SystemExit('APK version differs from release.json')
@@ -56,7 +55,7 @@ def main():
     with zipfile.ZipFile(apk) as archive:
         names = archive.namelist()
         if 'classes.dex' not in names or not any(n.startswith('lib/arm64-v8a/libtmessages') for n in names):
-            raise SystemExit('Expected full Nagram classes and native engine in APK')
+            raise SystemExit('Expected full Telegram classes and native engine in APK')
         if any(n.startswith('lib/') and not n.startswith('lib/arm64-v8a/') for n in names):
             raise SystemExit('Unexpected ABI in ARM64-only release')
         if len([n for n in names if n.startswith('lib/arm64-v8a/libzstd-jni-') and n.endswith('.so')]) != 1:
@@ -78,7 +77,7 @@ def main():
     (client / 'TGMAX_NATIVE_DEPENDENCIES.txt').write_text(modules)
     source = output / f'MAXGRAM-CLIENT-{release["version"]}-source.tar.gz'
     with tarfile.open(source, 'w:gz', compresslevel=3) as tar:
-        tar.add(client, arcname='MAXGRAM-CLIENT/nagram-client', filter=source_filter)
+        tar.add(client, arcname='MAXGRAM-CLIENT/telegram-client', filter=source_filter)
         for path in ['LICENSE', 'SOURCE_PROVENANCE.md', 'upstream.lock.json', 'release.json', 'README.md', 'scripts', 'integrations', 'docs', 'max-backend']:
             tar.add(ROOT / path, arcname='MAXGRAM-CLIENT/integration/' + path, filter=source_filter)
     hashes = []

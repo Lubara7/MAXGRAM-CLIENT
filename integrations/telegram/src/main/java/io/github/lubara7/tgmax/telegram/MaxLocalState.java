@@ -1,4 +1,4 @@
-package io.github.lubara7.tgmax.nagram;
+package io.github.lubara7.tgmax.telegram;
 
 import android.content.Context;
 import android.security.keystore.KeyGenParameterSpec;

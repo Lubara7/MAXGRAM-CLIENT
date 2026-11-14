@@ -1,5 +1,7 @@
 # TG-MAX Ultimate — анализ MAX и план перехода на интерфейс Telegram
 
+Актуализация 14 ноября 2026 года: основа заменена на официальный DrKLO/Telegram 13.2.2; из NagramXF переносятся только выбранные локальные функции. Разрешён QR-вход через MAX. В меню входа семь языков, португальский без региона выбирает бразильский вариант. Подробности реализации и текущие ограничения — в [актуальной архитектуре](telegram-migration.md). Оставшаяся часть документа сохраняет первоначальный план и разбор исходных скриншотов от 8 ноября.
+
 Дата проверки: 8 ноября 2026 года. Платформа: Android. Визуальная база: исходники NagramXF, указанные заказчиком. Документ описывает целевое устройство приложения и порядок разработки; наличие строки в плане не означает готовую функцию.
 
 ## 1. Зафиксированная цель
@@ -188,14 +190,14 @@ Komet содержит реальную проверку `passwordChallenge`/`tr
 | Путь | Назначение |
 |---|---|
 | `upstream/nagramxf`, `upstream/komet`, `upstream.lock.json` | Закреплённые исходники и контроль обновлений. |
-| `integrations/nagram/` | Узкий слой совместимости, изменение контроллеров/навигации, воспроизводимые patches. |
+| `integrations/telegram/` | Узкий слой совместимости, изменение контроллеров/навигации, воспроизводимые patches. |
 | `max-core/model/`, `max-core/service/` | Независимые MAX-модели, capabilities, интерфейсы auth/dialogs/media/stories/calls. |
 | `max-backend/` | Wire codec, transport, typed operations, error mapping; общий пакет без Android UI. |
 | `max-sync/` | Server cursors, reconnect, dedup, outbox и reconciliation. |
 | `max-storage/` | Per-account SQLite mappings/cache/outbox и Keystore session store. |
 | `max-media/`, `max-calls/` | Upload/download и самостоятельный MAX call engine. |
 | `core/localization/` | Разрешённые языки и переводы новых/адаптированных строк. |
-| `scripts/prepare_nagram_client.py` | Материализация закреплённого Nagram и применение интеграции без правки исходного submodule. |
+| `scripts/prepare_telegram_client.py` | Материализация закреплённого Nagram и применение интеграции без правки исходного submodule. |
 | `docs/screen-map.md`, `docs/protocol-coverage.md` | Таблица S01–S45 и доказанная поддержка операций, fixtures и проверенные ошибки. |
 | `tests/visual/`, `tests/protocol/`, `tests/e2e/` | UI baseline, синтетические пакеты, сквозные сценарии на разрешённых тестовых аккаунтах. |
 | `SOURCE_PROVENANCE.md`, `LICENSE`, `THIRD_PARTY_NOTICES` | Происхождение, изменения, лицензии и исходники распространяемой сборки. |

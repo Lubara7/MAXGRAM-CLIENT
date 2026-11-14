@@ -6,3 +6,6 @@
 	path = upstream/komet
 	url = https://github.com/KometTeam/Komet.git
 	shallow = true
+[submodule "upstream/telegram"]
+	path = upstream/telegram
+	url = https://github.com/DrKLO/Telegram.git

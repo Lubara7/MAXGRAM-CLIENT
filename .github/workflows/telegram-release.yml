@@ -1,4 +1,4 @@
-name: Nagram APK release
+name: Telegram APK release
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
   build-release:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')
     concurrency:
-      group: nagram-release
+      group: telegram-release
       cancel-in-progress: true
     runs-on: ubuntu-24.04
     timeout-minutes: 120
@@ -51,23 +51,23 @@ jobs:
           key: tgmax-alpha-debug-keystore-v2
       - name: Install native Android toolchain
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.2.12479018' 'cmake;3.31.6'
-      - name: Prepare pinned Nagram source
+      - name: Prepare pinned Telegram source
         run: |
-          git submodule update --init --depth 1 upstream/nagramxf upstream/komet
-          python3 scripts/prepare_nagram_client.py
-          python3 scripts/init_nagram_dependencies.py
-      - name: Build real Nagram APK and test MAX backend
-        working-directory: build/nagram-client
-        run: ./gradlew --no-daemon --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g' :tgmax-backend:test :TMessagesProj:assembleNormalDebug
+          git submodule update --init --depth 1 upstream/telegram upstream/komet
+          python3 scripts/prepare_telegram_client.py
+          python3 scripts/init_telegram_dependencies.py
+      - name: Build real Telegram APK and test MAX backend
+        working-directory: build/telegram-client
+        run: ./gradlew --no-daemon --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g' :tgmax-backend:test :TMessagesProj_AppStandalone:assembleAfatDebug
       - name: Prepare and verify release artifacts
         run: |
           mkdir -p dist
-          python3 scripts/package_release.py --client build/nagram-client --output dist
+          python3 scripts/package_release.py --client build/telegram-client --output dist
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs dist/*.apk > dist/signature-verification.txt
           cp docs/release-notes.md dist/release-notes.md
       - uses: actions/upload-artifact@v6
         with:
-          name: tgmax-nagram-apk
+          name: tgmax-telegram-apk
           path: dist/*
           if-no-files-found: error
       - name: Publish prerelease with APK
@@ -76,12 +76,12 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           RELEASE_TAG=$(python3 -c 'import json; print(json.load(open("release.json"))["tag"])')
-          gh release create "$RELEASE_TAG" dist/*.apk dist/SHA256SUMS.txt dist/signature-verification.txt dist/*-source.tar.gz --target "$GITHUB_SHA" --prerelease --title "MAXGRAM CLIENT $RELEASE_TAG — Nagram alpha" --notes-file docs/release-notes.md
+          gh release create "$RELEASE_TAG" dist/*.apk dist/SHA256SUMS.txt dist/signature-verification.txt dist/*-source.tar.gz --target "$GITHUB_SHA" --prerelease --title "MAXGRAM CLIENT $RELEASE_TAG — Telegram alpha" --notes-file docs/release-notes.md
       - name: Upload build reports
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: nagram-build-reports
+          name: telegram-build-reports
           path: |
-            build/nagram-client/**/build/reports/
-            build/nagram-client/TGMAX_CHANGES.*
+            build/telegram-client/**/build/reports/
+            build/telegram-client/TGMAX_CHANGES.*

@@ -37,6 +37,8 @@ public final class MaxClient implements Closeable {
     private volatile CompletableFuture<Void> connecting;
     private volatile boolean ready;
     private volatile boolean closed;
+    private volatile MaxPrivacyPolicy privacy = MaxPrivacyPolicy.DEFAULT;
+    private volatile boolean interactive = true;
     private volatile Map<String, Object> handshake = Maps.of();
 
     public MaxClient(OkHttpClient http, MaxDevice device) { this(http, device, ENDPOINT, 30_000); }
@@ -47,7 +49,7 @@ public final class MaxClient implements Closeable {
         this.endpoint = endpoint;
         this.timeoutMillis = timeoutMillis;
         scheduler.scheduleWithFixedDelay(() -> {
-            if (ready) rawRequest(MaxOpcode.PING, Maps.of("interactive", true));
+            if (ready) rawRequest(MaxOpcode.PING, Maps.of("interactive", interactive));
         }, 30, 30, TimeUnit.SECONDS);
     }
 
@@ -108,6 +110,15 @@ public final class MaxClient implements Closeable {
 
     public Map<String, Object> handshakeData() { return handshake; }
     public MaxDevice device() { return device; }
+    public CompletableFuture<Map<String, Object>> activity(boolean value) {
+        interactive = value;
+        return request(MaxOpcode.PING, Maps.of("interactive", value));
+    }
+    public synchronized void setPrivacy(MaxPrivacyPolicy policy) {
+        if (policy == null) throw new IllegalArgumentException("privacy");
+        privacy = policy;
+        if (ready) rawRequest(MaxOpcode.PING, Maps.of("interactive", interactive && policy.sendsPresence()));
+    }
     public boolean isConnected() { return ready; }
     public void addPushListener(Consumer<MaxFrame> listener) { listeners.add(listener); }
     public void addConnectionListener(Consumer<Boolean> listener) { connectionListeners.add(listener); }
@@ -129,7 +140,14 @@ public final class MaxClient implements Closeable {
         return result;
     }
 
-    private CompletableFuture<Object> rawRequest(int opcode, Object payload) {
+    private synchronized CompletableFuture<Object> rawRequest(int opcode, Object payload) {
+        MaxPrivacyPolicy policy = privacy;
+        if (!policy.allows(opcode)) return CompletableFuture.completedFuture(Maps.of());
+        if ((opcode == MaxOpcode.PING || opcode == MaxOpcode.LOGIN) && payload instanceof Map) {
+            Map<String, Object> protectedPayload = new java.util.LinkedHashMap<>(Maps.object(payload));
+            protectedPayload.put("interactive", interactive && policy.sendsPresence() && Boolean.TRUE.equals(protectedPayload.get("interactive")));
+            payload = protectedPayload;
+        }
         Pending request;
         int seq;
         synchronized (pending) {

@@ -1,4 +1,4 @@
-package io.github.lubara7.tgmax.nagram;
+package io.github.lubara7.tgmax.telegram;
 
 import java.util.Locale;
 import org.telegram.messenger.LocaleController;

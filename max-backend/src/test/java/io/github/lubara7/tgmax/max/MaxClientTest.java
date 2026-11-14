@@ -223,6 +223,80 @@ public class MaxClientTest {
         assertEquals(java.util.List.of(294, 291), opcodes);
     }
 
+    @Test public void ghostPolicySuppressesQueuedReceiptsTypingAndActiveStatusAtTheSocket() throws Exception {
+        CountDownLatch init = new CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicReference<WebSocket> socket = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicReference<MaxFrame> handshake = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.List<MaxFrame> outbound = new java.util.concurrent.CopyOnWriteArrayList<>();
+        MaxClient c = start(new WebSocketListener() {
+            @Override public void onMessage(WebSocket ws, ByteString bytes) {
+                MaxFrame f = codec.decode(bytes.toByteArray());
+                if (f.opcode == MaxOpcode.INIT) { socket.set(ws); handshake.set(f); init.countDown(); }
+                else { outbound.add(f); respond(ws, f, Maps.of()); }
+            }
+        }, 2000);
+        CompletableFuture<?> queuedRead = c.request(MaxOpcode.READ, Maps.of("chatId", 10L));
+        assertTrue(init.await(3, TimeUnit.SECONDS));
+        c.setPrivacy(new MaxPrivacyPolicy(true, false, false));
+        respond(socket.get(), handshake.get(), Maps.of());
+        queuedRead.get(4, TimeUnit.SECONDS);
+        new MaxApi(c).typing(10, false).get(4, TimeUnit.SECONDS);
+        c.request(MaxOpcode.LOGIN, Maps.of("token", "synthetic", "interactive", true)).get(4, TimeUnit.SECONDS);
+        c.request(MaxOpcode.SEND, Maps.of("chatId", 10L)).get(4, TimeUnit.SECONDS);
+        assertEquals(java.util.List.of(MaxOpcode.LOGIN, MaxOpcode.SEND), outbound.stream().map(f -> f.opcode).collect(java.util.stream.Collectors.toList()));
+        assertEquals(false, Maps.object(outbound.get(0).payload).get("interactive"));
+        c.setPrivacy(MaxPrivacyPolicy.DEFAULT);
+        c.request(MaxOpcode.READ, Maps.of("chatId", 10L)).get(4, TimeUnit.SECONDS);
+        assertEquals(1, outbound.stream().filter(f -> f.opcode == MaxOpcode.READ).count());
+    }
+
+    @Test public void readAndTypingControlsAreIndependentAndBackgroundActivityStaysInactive() throws Exception {
+        java.util.List<MaxFrame> sent = new java.util.concurrent.CopyOnWriteArrayList<>();
+        MaxClient c = start(new WebSocketListener() {
+            @Override public void onMessage(WebSocket ws, ByteString bytes) {
+                MaxFrame f = codec.decode(bytes.toByteArray());
+                if (f.opcode != MaxOpcode.INIT) sent.add(f);
+                respond(ws, f, Maps.of());
+            }
+        }, 2000);
+        MaxApi api = new MaxApi(c);
+        c.connect().get(4, TimeUnit.SECONDS);
+        c.setPrivacy(new MaxPrivacyPolicy(false, true, false));
+        api.markRead(10, 20, 30).get(4, TimeUnit.SECONDS);
+        api.typing(10, false).get(4, TimeUnit.SECONDS);
+        c.setPrivacy(new MaxPrivacyPolicy(false, false, true));
+        api.typing(10, false).get(4, TimeUnit.SECONDS);
+        api.markRead(10, 20, 30).get(4, TimeUnit.SECONDS);
+        c.activity(false).get(4, TimeUnit.SECONDS);
+        api.login("synthetic").get(4, TimeUnit.SECONDS);
+        assertEquals(1, sent.stream().filter(f -> f.opcode == MaxOpcode.READ).count());
+        assertEquals(1, sent.stream().filter(f -> f.opcode == MaxOpcode.TYPING).count());
+        assertEquals("TEXT", Maps.object(sent.stream().filter(f -> f.opcode == MaxOpcode.TYPING).findFirst().get().payload).get("type"));
+        assertEquals(false, Maps.object(sent.stream().filter(f -> f.opcode == MaxOpcode.LOGIN).findFirst().get().payload).get("interactive"));
+    }
+
+    @Test public void maxQrFlowUsesServerTrackAndSharedAuthenticationCompletion() throws Exception {
+        java.util.List<Integer> opcodes = new java.util.concurrent.CopyOnWriteArrayList<>();
+        MaxClient c = start(new WebSocketListener() {
+            @Override public void onMessage(WebSocket ws, ByteString bytes) {
+                MaxFrame f = codec.decode(bytes.toByteArray());
+                if (f.opcode == MaxOpcode.INIT) { respond(ws, f, Maps.of()); return; }
+                opcodes.add(f.opcode);
+                if (f.opcode == 288) respond(ws, f, Maps.of("trackId", "synthetic-qr-track", "qrLink", "https://max.ru/qr?token=synthetic", "ttl", 120000, "pollingInterval", 1000));
+                else {
+                    assertEquals(Maps.of("trackId", "synthetic-qr-track"), f.payload);
+                    if (f.opcode == 289) respond(ws, f, Maps.of("status", Maps.of("loginAvailable", true, "ttl", 10000)));
+                    else respond(ws, f, Maps.of("passwordChallenge", Maps.of("trackId", "synthetic-password-track")));
+                }
+            }
+        }, 2000);
+        MaxApi api = new MaxApi(c);
+        MaxQrLogin.Params qr = api.requestQr().get(4, TimeUnit.SECONDS);
+        assertTrue(api.checkQr(qr.trackId).get(4, TimeUnit.SECONDS).loginAvailable);
+        assertTrue(api.loginByTrack(qr.trackId).get(4, TimeUnit.SECONDS).containsKey("passwordChallenge"));
+        assertEquals(java.util.List.of(288, 289, 291), opcodes);
+    }
+
     private void respond(WebSocket ws, MaxFrame request, Object payload) {
         ws.send(ByteString.of(codec.encode(new MaxFrame(1, request.sequence, request.opcode, payload))));
     }
