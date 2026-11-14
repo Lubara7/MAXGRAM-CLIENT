@@ -46,6 +46,7 @@ for style in resources.rglob('styles.xml'):
 print('Compact login layout, hidden contact sync and MAX splash artwork checked')
 
 app_build = (client / 'TMessagesProj/build.gradle').read_text()
+assert "path 'jni/CMakeLists.txt'\n            version '3.31.6'" in app_build
 backend_build = (client / 'tgmax-backend/build.gradle.kts').read_text()
 assert "implementation 'com.github.luben:zstd-jni:1.5.7-7@aar'" in app_build
 assert 'compileOnly("com.github.luben:zstd-jni:1.5.7-7")' in backend_build

@@ -40,6 +40,14 @@ def main():
     if actual != expected:
         raise SystemExit('Prepared client revision differs from upstream.lock.json')
     subprocess.run(['git', 'submodule', 'update', '--init', '--depth', '1', '--jobs', '4', *MODULES], cwd=client, check=True)
+    widget_modules = ['TMessagesProj/jni/twidget/twidget', 'TMessagesProj/jni/twidget/widget-sandbox']
+    subprocess.run(['git', 'submodule', 'update', '--init', '--recursive', '--depth', '1', '--jobs', '4', *widget_modules], cwd=client, check=True)
+    nested = subprocess.check_output(['git', 'submodule', 'status', '--recursive', *widget_modules], cwd=client, text=True)
+    if any(line and not line.startswith(' ') for line in nested.splitlines()):
+        raise SystemExit('Nested widget dependency revision mismatch')
+    quickjs = client / 'TMessagesProj/jni/twidget/widget-sandbox/packages/ios/Sources/CQuickJS/quickjs/quickjs.c'
+    if not quickjs.is_file():
+        raise SystemExit('Pinned widget sandbox is missing its nested QuickJS source')
     for module in MODULES:
         status = subprocess.check_output(['git', 'submodule', 'status', module], cwd=client, text=True)
         if not status.startswith(' '):

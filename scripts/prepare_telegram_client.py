@@ -181,6 +181,7 @@ def configure_build(target):
         text = text.replace("version '3.22.1'", "version '3.31.6'")
         gradle.write_text(text)
     change(library, "dependencies {", "dependencies {\n    implementation project(':tgmax-backend')\n    implementation 'com.github.luben:zstd-jni:1.5.7-7@aar'")
+    change(library, "path 'jni/CMakeLists.txt'", "path 'jni/CMakeLists.txt'\n            version '3.31.6'")
     library.write_text(library.read_text() + "\nandroid.defaultConfig.ndk.abiFilters.add('arm64-v8a')\n")
     text = app.read_text().replace('applicationIdSuffix ".web"', '')
     text = text.replace('abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"', 'abiFilters "arm64-v8a"')
