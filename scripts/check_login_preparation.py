@@ -42,3 +42,11 @@ assert 'setPadding(0, dp(32), 0, dp(80));' in login
 for qualifier in ['values-v31', 'values-night-v31']:
     assert '@mipmap/maxgram_launcher' in (resources / qualifier / 'styles.xml').read_text()
 print('Compact login layout, hidden contact sync and MAX splash artwork checked')
+
+app_build = (client / 'TMessagesProj/build.gradle').read_text()
+backend_build = (client / 'tgmax-backend/build.gradle.kts').read_text()
+assert "implementation 'com.github.luben:zstd-jni:1.5.7-28@aar'" in app_build
+assert 'compileOnly("com.github.luben:zstd-jni:1.5.7-28")' in backend_build
+assert 'implementation("com.github.luben:zstd-jni:' not in backend_build
+assert '-keep class com.github.luben.zstd.** { *; }' in (client / 'TMessagesProj/proguard-rules.pro').read_text()
+print('Official Android Zstandard AAR, desktop JAR exclusion and JNI keep rules checked')

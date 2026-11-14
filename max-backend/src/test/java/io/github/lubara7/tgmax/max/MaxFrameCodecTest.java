@@ -66,13 +66,24 @@ public class MaxFrameCodecTest {
         byte[] original = codec.encode(new MaxFrame(1, 7, 17, Maps.of("token", "synthetic-otp",
                 "metadata", String.join("", Collections.nCopies(100000, "x")))));
         byte[] body = Arrays.copyOfRange(original, 10, original.length);
-        byte[] compressed = new byte[body.length + 4096];
-        int length = new io.airlift.compress.zstd.ZstdCompressor().compress(body, 0, body.length, compressed, 0, compressed.length);
-        assertEquals(Maps.object(codec.decode(original).payload), Maps.object(codec.decode(frame(Arrays.copyOf(compressed, length), 255)).payload));
+        byte[] compressed = com.github.luben.zstd.Zstd.compress(body);
+        assertEquals(Maps.object(codec.decode(original).payload), Maps.object(codec.decode(frame(compressed, 255)).payload));
         byte[] lz4 = LZ4Factory.fastestJavaInstance().fastCompressor().compress(body);
         assertEquals(Maps.object(codec.decode(original).payload), Maps.object(codec.decode(frame(lz4, 1)).payload));
         reject(frame(new byte[] {1, 2, 3}, 255));
         reject(frame(body, 128));
+    }
+
+    @Test public void zstdUnknownContentSizeAndAndroidGoldenFixtureAreSupported() {
+        byte[] original = codec.encode(new MaxFrame(1, 7, 17, Maps.of("token", "synthetic-otp", "codeLength", 6)));
+        byte[] body = Arrays.copyOfRange(original, 10, original.length);
+        try (com.github.luben.zstd.ZstdCompressCtx context = new com.github.luben.zstd.ZstdCompressCtx()) {
+            byte[] compressed = context.setContentSize(false).compress(body);
+            assertEquals(-1, com.github.luben.zstd.Zstd.getFrameContentSize(compressed));
+            assertEquals(Maps.object(codec.decode(original).payload), Maps.object(codec.decode(frame(compressed, 255)).payload));
+        }
+        assertEquals(Maps.object(codec.decode(original).payload), Maps.object(codec.decode(hex(
+                "0a0100070011ff00002e28b52ffd242109010082a5746f6b656ead73796e7468657469632d6f7470aa636f64654c656e677468064cb672c4")).payload));
     }
 
     private byte[] frame(byte[] body, int compression) {
