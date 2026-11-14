@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['.github/workflows/apk-smoke.yml', 'scripts/check_phone_ui.py', 'scripts/ExtractCodecDex.java', 'scripts/CodecDeviceSmoke.java']
+    paths: ['.github/workflows/apk-smoke.yml', 'scripts/check_phone_ui.py', 'scripts/CodecInstrumentation.java', 'scripts/codec-test-AndroidManifest.xml', 'scripts/CodecDeviceSmoke.java']
   workflow_run:
     workflows: ["Nagram APK release", "Publish built APK"]
     types: [completed]
@@ -47,19 +47,21 @@ jobs:
           PYCODE
       - uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools build-tools;36.0.0'
+          packages: 'platform-tools build-tools;36.0.0 platforms;android-36'
           log-accepted-android-sdk-licenses: false
       - name: Prepare Android protocol fixture check
         run: |
-          mkdir -p codec-classes codec-tools codec-libs
-          curl --fail --silent --show-error --location https://repo.maven.apache.org/maven2/org/smali/dexlib2/2.5.2/dexlib2-2.5.2.jar -o codec-libs/dexlib2.jar
-          curl --fail --silent --show-error --location https://repo.maven.apache.org/maven2/org/smali/util/2.5.2/util-2.5.2.jar -o codec-libs/util.jar
-          curl --fail --silent --show-error --location https://repo.maven.apache.org/maven2/com/google/guava/guava/27.1-android/guava-27.1-android.jar -o codec-libs/guava.jar
-          curl --fail --silent --show-error --location https://repo.maven.apache.org/maven2/com/google/code/findbugs/jsr305/3.0.2/jsr305-3.0.2.jar -o codec-libs/jsr305.jar
-          javac -cp 'codec-libs/*' -d codec-tools scripts/ExtractCodecDex.java
-          java -Xmx2g -cp 'codec-tools:codec-libs/*' ExtractCodecDex ./*.apk codec-library.dex
-          javac -source 8 -target 8 -d codec-classes scripts/CodecDeviceSmoke.java
-          "$ANDROID_HOME/build-tools/36.0.0/d8" --min-api 27 --output codec-smoke.zip codec-classes/CodecDeviceSmoke.class codec-library.dex
+          mkdir -p codec-classes codec-dex
+          javac -source 8 -target 8 -cp "$ANDROID_HOME/platforms/android-36/android.jar" -d codec-classes scripts/CodecDeviceSmoke.java scripts/CodecInstrumentation.java
+          "$ANDROID_HOME/build-tools/36.0.0/d8" --min-api 27 --lib "$ANDROID_HOME/platforms/android-36/android.jar" --output codec-dex codec-classes/io/github/lubara7/tgmax/codectest/*.class
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" link --manifest scripts/codec-test-AndroidManifest.xml -I "$ANDROID_HOME/platforms/android-36/android.jar" -o codec-test-unsigned.apk
+          python3 - <<'PYCODE'
+          import zipfile
+          with zipfile.ZipFile('codec-test-unsigned.apk', 'a') as apk:
+              apk.write('codec-dex/classes.dex', 'classes.dex')
+          PYCODE
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -f 4 codec-test-unsigned.apk codec-test-aligned.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign --ks /tmp/tgmax-signing/debug.keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out codec-test.apk codec-test-aligned.apk
       - name: Allow emulator hardware acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -71,17 +73,16 @@ jobs:
           set -euo pipefail
           pkg=io.github.lubara7.tgmax
           adb shell getprop ro.product.cpu.abilist | grep -F arm64-v8a
-          adb install -g ./*.apk
-          adb push codec-smoke.zip /data/local/tmp/codec-smoke.zip
+          adb install -g MAXGRAM-CLIENT-*.apk
+          adb install -t -g codec-test.apk
           adb shell input keyevent KEYCODE_WAKEUP
           adb shell wm dismiss-keyguard
           activity=$(adb shell cmd package resolve-activity --brief "$pkg" | tail -n1 | tr -d '\r')
           adb shell am start -W -n "$activity"
-          codec_status=0
-          adb shell 'CLASSPATH=/data/local/tmp/codec-smoke.zip app_process -Xmx192m /data/local/tmp CodecDeviceSmoke' > codec-smoke.txt 2>&1 || codec_status=$?
-          cat codec-smoke.txt
           python3 scripts/check_phone_ui.py
-          test "$codec_status" -eq 0
+          adb shell am instrument -w io.github.lubara7.tgmax.codectest/io.github.lubara7.tgmax.codectest.CodecInstrumentation | tee codec-smoke.txt || true
+          adb logcat -d > codec-logcat.txt
+          grep -F 'INSTRUMENTATION_RESULT: codec_check=passed' codec-smoke.txt
           SCRIPT
       - name: Install and open phone login
         uses: reactivecircus/android-emulator-runner@v2
@@ -96,6 +97,7 @@ jobs:
           name: phone-login-ui
           path: |
             codec-smoke.txt
+            codec-logcat.txt
             login.xml
             login*.png
             languages.png

@@ -1,8 +1,14 @@
+package io.github.lubara7.tgmax.codectest;
+
 import java.util.Map;
 
 public class CodecDeviceSmoke {
     public static void main(String[] args) throws Exception {
-        Class<?> codecClass = Class.forName("io.github.lubara7.tgmax.max.MaxFrameCodec");
+        verify(CodecDeviceSmoke.class.getClassLoader());
+    }
+
+    public static void verify(ClassLoader loader) throws Exception {
+        Class<?> codecClass = Class.forName("io.github.lubara7.tgmax.max.MaxFrameCodec", true, loader);
         Object codec = codecClass.getConstructor().newInstance();
         String[] fixtures = {
             "0a0100070011ff00002e28b52ffd242109010082a5746f6b656ead73796e7468657469632d6f7470aa636f64654c656e677468064cb672c4",

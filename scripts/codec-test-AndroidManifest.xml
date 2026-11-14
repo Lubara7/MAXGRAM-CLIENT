@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="io.github.lubara7.tgmax.codectest">
+    <uses-sdk android:minSdkVersion="27" android:targetSdkVersion="36" />
+    <application android:hasCode="true" android:testOnly="true" android:debuggable="true" android:label="MAXGRAM codec test" />
+    <instrumentation android:name="io.github.lubara7.tgmax.codectest.CodecInstrumentation" android:targetPackage="io.github.lubara7.tgmax" />
+</manifest>
