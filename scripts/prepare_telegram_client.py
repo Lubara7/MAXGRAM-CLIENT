@@ -36,6 +36,10 @@ def guard_mtproto(target):
     java = target / "TMessagesProj/src/main/java"
     connection = java / "org/telegram/tgnet/ConnectionsManager.java"
     original = connection.read_text()
+    signature = re.search(r"private void sendRequestInternal\(([^)]*)\)", original)
+    callback = re.search(r"\bRequestDelegate\s+(\w+)", signature[1]) if signature else None
+    if callback is None:
+        raise RuntimeError("ConnectionsManager request callback signature changed")
     declarations = list(re.finditer(r"public static native (\w+) (native_\w+)\(([^;]*)\);", original))
     if len(declarations) < 35:
         raise RuntimeError("ConnectionsManager native API changed")
@@ -84,7 +88,7 @@ def guard_mtproto(target):
     position = text.rfind("}")
     connection.write_text(text[:position] + "\n" + "\n".join(wrappers) + "\n" + text[position:])
     add_after_opening(connection, r"private void sendRequestInternal\([^)]*\)", f"""        if ({runtime}.enabled()) {{
-            {runtime}.get(currentAccount).send(requestToken, object, onCompleteOrig,
+            {runtime}.get(currentAccount).send(requestToken, object, {callback[1]},
                     onCompleteTimestamp, onQuickAck, onWriteToSocket);
             return;
         }}
