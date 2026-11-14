@@ -38,6 +38,7 @@ The prepared checkout uses real Nagram UI components and a Java MAX protocol ada
 
 - [Architecture and integration](docs/nagram-migration.md)
 - [Authentication research and screen mapping](docs/auth-research.md)
+- [Telegram / Nagram video screen inventory](docs/ui-video-reference.md)
 - [Source provenance](SOURCE_PROVENANCE.md)
 - [Release notes and limitations](docs/release-notes.md)
 

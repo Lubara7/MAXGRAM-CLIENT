@@ -6,7 +6,7 @@ The JNI library registers the local NativeByteBuffer methods. The native build l
 
 `TgMaxRuntime` maps selected TLRPC request objects to MAX operations. TLRPC models are currently in-memory UI compatibility models, never serialized as MAX wire packets. MAX server IDs are preserved through `StableIds`; the initial persistent JSON index should migrate to a transactional database before large-scale use.
 
-MAX password verification uses a server trackId and opcode 115, following Komet AccountModule.checkPassword. The existing Nagram password page is reused without Telegram SRP. Password recovery/email and outgoing auth-call challenges are not implemented. The UI does not synthesize successful authorization for these steps.
+MAX password verification uses a server trackId and opcode 115, following Komet AccountModule.checkPassword. The existing Nagram password page is reused without Telegram SRP. Server-selected outgoing-call challenges use MAX callOutParams, opcode 294 status checks and opcode 291 verification, followed by the same authorization/password/registration transitions. Password recovery/email is not implemented. The UI does not synthesize successful authorization for unsupported steps.
 
 API support today: phone OTP/password login, account snapshot, dialogs/history, text/reply/edit/delete/read, cached contact/profile conversion and known channel join/leave. Unsupported request types return explicit errors. Reconnect is demand-driven; full lossless MAX gap recovery is still a task. Existing Nagram UI may expose unsupported controls in this alpha.
 
