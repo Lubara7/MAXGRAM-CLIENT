@@ -63,7 +63,7 @@ try:
         strings = {n.get('name'): n.text for n in ET.parse(Path('core/localization/src/main/res') / qualifier / 'strings.xml').findall('string')}
         nodes = wait_for('localized-login.xml', lambda rows: any(n.get('text') == strings['phone_title'] for n in rows))
         assert any(n.get('text') == strings['phone_description'] for n in nodes)
-        assert any(n.get('text') == strings['country_title'] for n in nodes)
+        assert any(n.get('content-desc') == strings['country_title'] for n in nodes)
         assert any(n.get('text') == '7' for n in nodes)
         Path(f'login-{qualifier}.png').write_bytes(adb('exec-out', 'screencap', '-p'))
         language_label = strings['language_title']

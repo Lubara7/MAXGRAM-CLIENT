@@ -77,8 +77,11 @@ jobs:
           adb shell wm dismiss-keyguard
           activity=$(adb shell cmd package resolve-activity --brief "$pkg" | tail -n1 | tr -d '\r')
           adb shell am start -W -n "$activity"
+          codec_status=0
+          adb shell 'CLASSPATH=/data/local/tmp/codec-smoke.zip app_process -Xmx192m /data/local/tmp CodecDeviceSmoke' > codec-smoke.txt 2>&1 || codec_status=$?
+          cat codec-smoke.txt
           python3 scripts/check_phone_ui.py
-          adb shell 'CLASSPATH=/data/local/tmp/codec-smoke.zip app_process -Xmx192m /data/local/tmp CodecDeviceSmoke'
+          test "$codec_status" -eq 0
           SCRIPT
       - name: Install and open phone login
         uses: reactivecircus/android-emulator-runner@v2
@@ -92,6 +95,7 @@ jobs:
         with:
           name: phone-login-ui
           path: |
+            codec-smoke.txt
             login.xml
             login*.png
             languages.png
