@@ -12,7 +12,7 @@ import org.msgpack.core.MessageBufferPacker;
 import org.msgpack.core.MessagePack;
 import org.msgpack.core.MessageUnpacker;
 import org.msgpack.core.ExtensionTypeHeader;
-import io.airlift.compress.zstd.ZstdDecompressor;
+import com.github.luben.zstd.Zstd;
 import java.util.Arrays;
 import java.nio.charset.StandardCharsets;
 
@@ -60,12 +60,17 @@ public final class MaxFrameCodec {
         buffer.get(body);
         if (ratio == 255) {
             try {
-                long size = ZstdDecompressor.getDecompressedSize(body, 0, body.length);
+                long size = Zstd.getFrameContentSize(body);
+                // ZSTD_CONTENTSIZE_UNKNOWN is -1; -2 denotes an invalid frame header.
+                if (size < -1) throw new MaxException("INVALID_COMPRESSION");
                 if (size > MAX_UNCOMPRESSED) throw new MaxException("DECOMPRESSED_FRAME_TOO_LARGE");
-                byte[] decoded = new byte[size < 0 ? MAX_UNCOMPRESSED : (int) size];
-                int written = new ZstdDecompressor().decompress(body, 0, body.length, decoded, 0, decoded.length);
-                body = Arrays.copyOf(decoded, written);
+                byte[] decoded = new byte[size <= 0 ? MAX_UNCOMPRESSED : (int) size];
+                long written = Zstd.decompressByteArray(decoded, 0, decoded.length, body, 0, body.length);
+                if (Zstd.isError(written) || written < 0 || written > decoded.length)
+                    throw new MaxException("INVALID_COMPRESSION");
+                body = Arrays.copyOf(decoded, (int) written);
             } catch (MaxException e) { throw e; }
+            catch (LinkageError e) { throw new MaxException("COMPRESSION_UNAVAILABLE", e); }
             catch (RuntimeException e) { throw new MaxException("INVALID_COMPRESSION", e); }
         } else if (ratio > 0) {
             if (ratio > 127) throw new MaxException("INVALID_COMPRESSION");

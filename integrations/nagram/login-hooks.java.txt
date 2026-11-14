@@ -51,7 +51,7 @@
         maxLanguageButton.setOnClickListener(v -> showMaxLanguages());
         sizeNotifierFrameLayout.addView(maxLanguageButton, LayoutHelper.createFrame(32, 32, Gravity.RIGHT | Gravity.TOP, 16, 16, 64, 16));
         maxPolicy = new TextView(context);
-        maxPolicy.setTextSize(12);
+        maxPolicy.setTextSize(11);
         maxPolicy.setGravity(Gravity.CENTER);
         maxPolicy.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
         maxPolicy.setLinkTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText));
@@ -61,7 +61,7 @@
         String recommendations = "<a href=\"https://legal.max.ru/recsysrules\">" + getString(R.string.TgMaxRecommendations) + "</a>";
         maxPolicy.setText(android.text.Html.fromHtml(LocaleController.formatString(R.string.TgMaxLegalIntro,
                 privacy, terms, recommendations), android.text.Html.FROM_HTML_MODE_LEGACY));
-        sizeNotifierFrameLayout.addView(maxPolicy, LayoutHelper.createFrame(-1, -2, Gravity.BOTTOM, 24, 0, 24, 8));
+        sizeNotifierFrameLayout.addView(maxPolicy, LayoutHelper.createFrame(-1, -2, Gravity.BOTTOM, 24, 0, 88, 8));
         updateMaxLoginControls();
     }
 
@@ -77,7 +77,6 @@
         }
         if (maxPolicy != null && maxPolicy.getVisibility() == View.VISIBLE) {
             ((android.view.ViewGroup.MarginLayoutParams) maxPolicy.getLayoutParams()).bottomMargin = dp(8) + keyboardOffset;
-            ((android.view.ViewGroup.MarginLayoutParams) floatingButton.getLayoutParams()).bottomMargin += maxPolicy.getMeasuredHeight() + dp(16);
         }
     }
 
@@ -86,10 +85,16 @@
         Context context = getParentActivity();
         LinearLayout list = new LinearLayout(context);
         list.setOrientation(LinearLayout.VERTICAL);
+        TextView title = new TextView(context);
+        title.setText(getString(R.string.TgMaxLanguageTitle));
+        title.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        title.setTypeface(AndroidUtilities.bold());
+        title.setTextSize(20);
+        list.addView(title, LayoutHelper.createLinear(-1, -2, 20, 12, 20, 12));
         ScrollView scroll = new ScrollView(context);
         scroll.addView(list);
         org.telegram.ui.ActionBar.BottomSheet sheet = new org.telegram.ui.ActionBar.BottomSheet.Builder(context)
-                .setTitle(getString(R.string.TgMaxLanguageTitle), true).setCustomView(scroll).create();
+                .setCustomView(scroll).create();
         for (LocaleController.LocaleInfo language : LocaleController.getInstance().languages) {
             org.telegram.ui.Cells.LanguageCell cell = new org.telegram.ui.Cells.LanguageCell(context);
             cell.setLanguage(language, null, false);

@@ -9,7 +9,7 @@ dependencies {
     api("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.msgpack:msgpack-core:0.9.10")
     implementation("org.lz4:lz4-java:1.8.0")
-    implementation("io.airlift:aircompressor:0.27")
+    implementation("com.github.luben:zstd-jni:1.5.7-7")
     testImplementation("junit:junit:4.13.2")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }

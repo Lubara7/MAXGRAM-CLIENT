@@ -59,6 +59,8 @@ def main():
             raise SystemExit('Expected full Nagram classes and native engine in APK')
         if any(n.startswith('lib/') and not n.startswith('lib/arm64-v8a/') for n in names):
             raise SystemExit('Unexpected ABI in ARM64-only release')
+        if len([n for n in names if n.startswith('lib/arm64-v8a/libzstd-jni-') and n.endswith('.so')]) != 1:
+            raise SystemExit('Expected the Android Zstandard JNI library in the APK')
     sdk = os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT')
     if not sdk:
         raise SystemExit('Set ANDROID_HOME to verify manifest')
