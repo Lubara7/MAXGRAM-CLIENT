@@ -63,9 +63,10 @@ final class MaxLocalState implements StableIds.Storage {
     String profileVersion(String recommended) {
         android.content.SharedPreferences preferences = context.getSharedPreferences("max_device_" + account, Context.MODE_PRIVATE);
         String version = preferences.getString("app_version", null);
-        if (version == null) {
-            File base = sessionFile.getBaseFile();
-            boolean legacy = base.exists() || new File(base.getPath() + ".bak").exists();
+        File base = sessionFile.getBaseFile();
+        boolean hasSession = base.exists() || new File(base.getPath() + ".bak").exists();
+        if (version == null || preferences.getBoolean("auto_profile",false) && !hasSession && !recommended.equals(version)) {
+            boolean legacy = version == null && hasSession;
             version = legacy ? "26.8.8" : recommended;
             if (!preferences.edit().putString("app_version", version).putBoolean("legacy_profile", legacy).commit())
                 throw new MaxException("MAX_STORAGE");
@@ -91,32 +92,45 @@ final class MaxLocalState implements StableIds.Storage {
         write(idsFile, new JSONObject(values).toString().getBytes(StandardCharsets.UTF_8));
     }
 
-    synchronized String[] session() {
+    private synchronized String[] sessionRecord() {
         try (java.io.InputStream raw = sessionFile.openRead()) {
-            DataInputStream in = new DataInputStream(new ByteArrayInputStream(readBounded(raw, 131_072)));
+            DataInputStream in = new DataInputStream(new ByteArrayInputStream(readBounded(raw, 262_144)));
             int version = in.readUnsignedByte();
             int size = in.readUnsignedByte();
-            if (version != 1 || size != 12) throw new MaxException("MAX_STORAGE");
+            if ((version != 1 && version != 2) || size != 12) throw new MaxException("MAX_STORAGE");
             byte[] iv = new byte[size]; in.readFully(iv);
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.DECRYPT_MODE, key(), new GCMParameterSpec(128, iv));
-            DataInputStream decoded = new DataInputStream(new ByteArrayInputStream(cipher.doFinal(readBounded(in, 131_072))));
-            return new String[] {decoded.readUTF(), decoded.readUTF()};
+            DataInputStream decoded = new DataInputStream(new ByteArrayInputStream(cipher.doFinal(readBounded(in, 262_144))));
+            String user=decoded.readUTF(), token=decoded.readUTF(), profile=version==2?decoded.readUTF():"";
+            if(decoded.available()!=0)throw new MaxException("MAX_STORAGE");
+            return new String[]{user,token,profile};
         } catch (FileNotFoundException missing) { return null; }
         catch (Exception e) { throw new MaxException("MAX_STORAGE", e); }
     }
 
-    synchronized void session(long userId, String token) {
+    synchronized String[] session(){String[] r=sessionRecord();return r==null?null:new String[]{r[0],r[1]};}
+    synchronized Map<String,Object> importedHandshake(){
+        String[] r=sessionRecord();if(r==null||r[2].isEmpty())return null;
+        try{return io.github.lubara7.tgmax.max.MaxWebSessionImport.validateHandshake(MaxMessageArchive.object(new JSONObject(r[2])));}
+        catch(Exception e){throw new MaxException("MAX_STORAGE",e);}
+    }
+    synchronized void session(long userId,String token){String[] r=sessionRecord();writeSession(userId,token,r==null?"":r[2]);}
+    synchronized void importedSession(long userId,String token,Map<String,Object> profile){
+        writeSession(userId,token,new JSONObject(io.github.lubara7.tgmax.max.MaxWebSessionImport.validateHandshake(profile)).toString());
+    }
+    private void writeSession(long userId,String token,String profile) {
+
         try {
             ByteArrayOutputStream raw = new ByteArrayOutputStream();
             DataOutputStream clear = new DataOutputStream(raw);
-            clear.writeUTF(Long.toString(userId)); clear.writeUTF(token);
+            clear.writeUTF(Long.toString(userId)); clear.writeUTF(token); clear.writeUTF(profile);
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE, key());
             byte[] encrypted = cipher.doFinal(raw.toByteArray());
             ByteArrayOutputStream record = new ByteArrayOutputStream();
             DataOutputStream out = new DataOutputStream(record);
-            out.writeByte(1); out.writeByte(cipher.getIV().length); out.write(cipher.getIV()); out.write(encrypted);
+            out.writeByte(2); out.writeByte(cipher.getIV().length); out.write(cipher.getIV()); out.write(encrypted);
             write(sessionFile, record.toByteArray());
         } catch (Exception e) { throw new MaxException("MAX_STORAGE", e); }
     }

@@ -24,6 +24,8 @@ public final class MaxSessionProfile {
         return new MaxSessionProfile("WEB", version, "MAXGRAM CLIENT", 0, null, true);
     }
 
+    public boolean usesLegacyBinary() { return legacyWeb; }
+
     public static MaxSessionProfile mobile(String type, String version, String name, int build, String arch) {
         if (!("ANDROID".equals(type) || "IOS".equals(type) || "DESKTOP".equals(type)) || build <= 0)
             throw new MaxException("MAX_MOBILE_PROFILE_INVALID");

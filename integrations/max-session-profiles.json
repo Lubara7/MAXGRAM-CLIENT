@@ -7,7 +7,8 @@
       "deviceType": "WEB",
       "appVersion": "26.8.8",
       "status": "unverified",
-      "note": "Existing prototype profile. No 72-hour observation or current-version acceptance has been recorded."
+      "note": "Existing prototype profile. No 72-hour observation or current-version acceptance has been recorded.",
+      "wireFormat": "BINARY_V10"
     },
     "web-26.11.6": {
       "transport": "WEBSOCKET",
@@ -20,7 +21,8 @@
       "reviewedAtUtc": "2026-11-14T13:21:40.140682Z",
       "deviceIdKind": "UUID",
       "protocolSourceUrl": "https://web.max.ru/_app/immutable/chunks/RmCTWSHK.js",
-      "protocolSourceSha256": "5902291198938920c904b63e67cff4fdb26c5de08bf0ae8d423263533fb793b7"
+      "protocolSourceSha256": "5902291198938920c904b63e67cff4fdb26c5de08bf0ae8d423263533fb793b7",
+      "wireFormat": "JSON_V11"
     }
   },
   "reviewedSources": {

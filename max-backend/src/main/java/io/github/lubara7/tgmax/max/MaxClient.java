@@ -27,6 +27,7 @@ public final class MaxClient implements Closeable {
     private final long timeoutMillis;
     private final Supplier<CompletableFuture<Void>> connectionPermission;
     private final MaxFrameCodec codec = new MaxFrameCodec();
+    private final MaxJsonFrameCodec jsonCodec = new MaxJsonFrameCodec();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "tgmax-protocol"); t.setDaemon(true); return t;
     });
@@ -104,6 +105,7 @@ public final class MaxClient implements Closeable {
 
                         @Override public void onMessage(WebSocket ws, ByteString bytes) {
                             if (ws != socket) return;
+                            if (usesJson()) { disconnected(ws, new MaxException("UNEXPECTED_BINARY_FRAME")); return; }
                             try { receive(codec.decode(bytes.toByteArray())); }
                             catch (RuntimeException e) {
                                 String detail = e instanceof MaxException ? ((MaxException) e).code : "INVALID_RESPONSE";
@@ -112,7 +114,10 @@ public final class MaxClient implements Closeable {
                         }
 
                         @Override public void onMessage(WebSocket ws, String text) {
-                            disconnected(ws, new MaxException("UNEXPECTED_TEXT_FRAME"));
+                            if (ws != socket) return;
+                            if (!usesJson()) { disconnected(ws, new MaxException("UNEXPECTED_TEXT_FRAME")); return; }
+                            try { receive(jsonCodec.decode(text)); }
+                            catch (RuntimeException failure) { disconnected(ws, new MaxException("PROTOCOL_ERROR", failure)); }
                         }
 
                         @Override public void onFailure(WebSocket ws, Throwable t, Response response) {
@@ -198,7 +203,7 @@ public final class MaxClient implements Closeable {
                 return request.result;
             }
             WebSocket current = socket;
-            if (current == null || !current.send(ByteString.of(codec.encode(new MaxFrame(0, seq, opcode, payload)))))
+            if (current == null || !write(current, new MaxFrame(0, seq, opcode, payload)))
                 request.result.completeExceptionally(new MaxException("NETWORK_WRITE"));
         } catch (java.util.concurrent.RejectedExecutionException e) {
             request.result.completeExceptionally(new MaxException("CLIENT_CLOSED", e));
@@ -206,11 +211,16 @@ public final class MaxClient implements Closeable {
         return request.result;
     }
 
+    public boolean usesJson() { return !device.profile.usesLegacyBinary(); }
+    private boolean write(WebSocket socket, MaxFrame frame) {
+        return usesJson() ? socket.send(jsonCodec.encode(frame)) : socket.send(ByteString.of(codec.encode(frame)));
+    }
+
     private void receive(MaxFrame frame) {
         if (frame.command == 0) {
             if (frame.opcode == MaxOpcode.PING) {
                 WebSocket current = socket;
-                if (current != null) current.send(ByteString.of(codec.encode(new MaxFrame(1, frame.sequence, frame.opcode, null))));
+                if (current != null) write(current, new MaxFrame(1, frame.sequence, frame.opcode, null));
             } else listeners.forEach(l -> l.accept(frame));
             return;
         }

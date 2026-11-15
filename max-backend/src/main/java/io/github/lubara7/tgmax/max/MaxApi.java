@@ -111,8 +111,9 @@ public final class MaxApi {
 
     public CompletableFuture<Map<String, Object>> login(String token) {
         return client.connect().thenCompose(unused -> {
-            Map<String, Object> payload = Maps.of("token", token, "interactive", true, "presenceSync", -1,
-                    "chatsSync", -1, "exp", Maps.of("chatsCountGroups", new byte[] {0x0b, 0x32}));
+            Map<String, Object> payload = client.usesJson()
+                    ? Maps.of("token",token,"interactive",true,"chatsSync",0,"contactsSync",0,"presenceSync",0,"draftsSync",0,"chatsCount",40)
+                    : Maps.of("token",token,"interactive",true,"presenceSync",-1,"chatsSync",-1,"exp",Maps.of("chatsCountGroups",new byte[]{0x0b,0x32}));
             byte[] fingerprint = fingerprint();
             if (fingerprint != null) payload.put("chatCacheFingerprint", fingerprint);
             return client.request(MaxOpcode.LOGIN, payload);
@@ -129,6 +130,21 @@ public final class MaxApi {
 
     public CompletableFuture<Map<String, Object>> contacts(List<Long> ids) {
         return client.request(MaxOpcode.CONTACT_INFO, Maps.of("contactIds", ids));
+    }
+
+    public CompletableFuture<Map<String,Object>> config() { return client.request(22, Maps.of()); }
+    public CompletableFuture<Map<String,Object>> changeSetting(String key,Object value) {
+        return client.request(22,MaxAccountSettings.update(key,value));
+    }
+    public CompletableFuture<Map<String,Object>> changeProfile(String first,String last,String description) {
+        if(first==null||first.trim().isEmpty())throw new MaxException("FIRSTNAME_INVALID");
+        return client.request(16,Maps.of("firstName",first,"lastName",last,"description",description,"avatarType","USER_AVATAR"));
+    }
+    public CompletableFuture<Map<String,Object>> blocked(int offset,int count) {
+        return client.request(36,Maps.of("status","BLOCKED","from",offset,"count",Math.min(100,Math.max(1,count))));
+    }
+    public CompletableFuture<Map<String,Object>> block(long id,boolean blocked) {
+        return client.request(34,Maps.of("contactId",id,"action",blocked?"BLOCK":"UNBLOCK"));
     }
 
     public CompletableFuture<Map<String, Object>> history(long chatId, long from, int count) {
@@ -183,6 +199,7 @@ public final class MaxApi {
     }
 
     private byte[] fingerprint() {
+        if (client.usesJson()) return null;
         Object seed = client.handshakeData().get("callsSeed");
         if (seed == null) return null;
         String[] hashes = {

@@ -29,8 +29,8 @@ public final class TgMaxRuntime {
     private final StableIds ids;
     private final TgMaxModels models;
     private final MaxMessageArchive archive;
-    private final MaxClient client;
-    private final MaxApi api;
+    private volatile MaxClient client;
+    private volatile MaxApi api;
     private final android.content.SharedPreferences privacyPreferences;
     private volatile MaxPrivacyPolicy privacy;
     private final ExecutorService executor;
@@ -39,6 +39,7 @@ public final class TgMaxRuntime {
     private volatile CompletableFuture<Void> login;
     private volatile CompletableFuture<Void> allDialogs;
     private volatile Map<String, Object> loginData = Maps.of();
+    private volatile CompletableFuture<TLObject> importedAuth;
     private volatile String registrationToken;
     private volatile String sessionToken;
     private volatile String passwordTrack;
@@ -48,7 +49,7 @@ public final class TgMaxRuntime {
 
     public void preparePhoneAuth(String userAgent) {
         client.device().language = TgMaxLocales.networkCode(LocaleController.getLocaleStringIso639());
-        if (userAgent != null && !userAgent.isEmpty()) {
+        if (!client.device().hasFixedProfile() && userAgent != null && !userAgent.isEmpty()) {
             local.webUserAgent(userAgent);
             client.device().setUserAgent(userAgent);
         }
@@ -93,21 +94,15 @@ public final class TgMaxRuntime {
         String screen = legacy ? display.widthPixels + "x" + display.heightPixels
                 : String.format(java.util.Locale.US, "%.0fx%.0f %.1fx", display.heightPixels / display.density,
                         display.widthPixels / display.density, display.density);
-        MaxDevice device = new MaxDevice(local.deviceId(), TgMaxLocales.networkCode(LocaleController.getLocaleStringIso639()),
+        Map<String,Object> importedProfile = local.importedHandshake();
+        MaxDevice device = importedProfile != null ? MaxDevice.fromWebHandshake(importedProfile) : new MaxDevice(local.deviceId(), TgMaxLocales.networkCode(LocaleController.getLocaleStringIso639()),
                 legacy ? "Android " + Build.VERSION.RELEASE : "Android", screen, TimeZone.getDefault().getID(), local.webUserAgent(),
                 legacy ? MaxSessionProfile.legacyWeb(version) : MaxSessionProfile.web(version, null),
                 legacy ? TgMaxLocales.networkCode(LocaleController.getLocaleStringIso639()) : deviceLanguage());
         client = new MaxClient(new OkHttpClient.Builder().connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS).build(), device, () -> TgMaxConsent.permission(context));
         client.setPrivacy(privacy);
         api = new MaxApi(client);
-        client.addPushListener(frame -> executor.execute(() -> {
-            try { push(frame); }
-            catch (RuntimeException failure) { allDialogs = null; }
-        }));
-        client.addConnectionListener(connected -> {
-            ConnectionsManager.onConnectionStateChanged(connected ? 3 : 1, account);
-            if (!connected) { login = null; allDialogs = null; }
-        });
+        attach(client);
         if (!device.ready().isDone()) TgMaxConsent.permission(context).thenRun(() -> new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
             try {
                 String agent = android.webkit.WebSettings.getDefaultUserAgent(context);
@@ -117,7 +112,19 @@ public final class TgMaxRuntime {
         }));
     }
 
-    private static String recommendedWebVersion(Context context) {
+    private void attach(MaxClient connection) {
+        connection.addPushListener(frame -> executor.execute(() -> {
+            try { push(frame); }
+            catch (RuntimeException failure) { allDialogs = null; }
+        }));
+        connection.addConnectionListener(connected -> {
+            if (client != connection) return;
+            ConnectionsManager.onConnectionStateChanged(connected ? 3 : 1, account);
+            if (!connected) { login = null; allDialogs = null; }
+        });
+    }
+
+    public static String recommendedWebVersion(Context context) {
         try (java.io.InputStream stream = context.getAssets().open("tgmax-session-profiles.json")) {
             java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
             byte[] block = new byte[4096]; int count;
@@ -145,6 +152,63 @@ public final class TgMaxRuntime {
             runtime.login = null; runtime.allDialogs = null;
             MessagesController.getInstance(runtime.account).loadDialogs(0, 0, 100, false);
         }
+    }
+
+    public synchronized CompletableFuture<TLObject> importWebSession(String credential, String handshake) {
+        if (importedAuth != null && !importedAuth.isDone()) return failedAuth("MAX_AUTH_IN_PROGRESS");
+        if (org.telegram.messenger.UserConfig.getInstance(account).isClientActivated()) return failedAuth("MAX_IMPORT_ACCOUNT_ACTIVE");
+        final MaxWebSessionImport imported;
+        try {
+            if (credential.length()>131072 || handshake.length()>32768 || local.session()!=null) return failedAuth("MAX_IMPORT_SLOT_HAS_SESSION");
+            org.json.JSONObject auth=credential.trim().startsWith("{")?new org.json.JSONObject(credential):new org.json.JSONObject().put("token",credential.trim());
+            imported=MaxWebSessionImport.parse(MaxMessageArchive.object(auth),MaxMessageArchive.object(new org.json.JSONObject(handshake)));
+        } catch(Exception failure) {return failedAuth("MAX_IMPORT_INVALID");}
+        Context context=ApplicationLoader.applicationContext;
+        MaxClient candidate=new MaxClient(new OkHttpClient.Builder().connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS).build(),
+                MaxDevice.fromWebHandshake(imported.handshake()),()->TgMaxConsent.permission(context));
+        candidate.setPrivacy(privacy); MaxApi importedApi=new MaxApi(candidate);
+        Object transition=new Object();
+        CompletableFuture<TLObject> result=new CompletableFuture<TLObject>() {
+            @Override public boolean cancel(boolean interrupt) {synchronized(transition){return super.cancel(interrupt);}}
+        };
+        importedAuth=result;
+        result.whenComplete((value,error)->{if(error!=null)candidate.close();});
+        importedApi.login(imported.tokenForLogin()).whenCompleteAsync((data,failure)-> {
+            synchronized(transition) {
+                if(result.isDone())return;
+                try {
+                    if(failure!=null)throw new java.util.concurrent.CompletionException(failure);
+                    if(org.telegram.messenger.UserConfig.getInstance(account).isClientActivated())throw new MaxException("MAX_IMPORT_ACCOUNT_ACTIVE");
+                    long self=Maps.number(Maps.object(Maps.object(data.get("profile")).get("contact")).get("id"),0);
+                    imported.requireViewer(self);
+                    String token=Maps.string(data.get("token"));if(token.isEmpty())token=imported.tokenForLogin();
+                    local.importedSession(self,token,imported.handshake());
+                    client.close();client=candidate;api=importedApi;attach(candidate);
+                    models.snapshot(data);sessionToken=token;loginData=data;login=CompletableFuture.completedFuture(null);allDialogs=null;
+                    TLRPC.TL_auth_authorization auth=new TLRPC.TL_auth_authorization();auth.user=models.user(models.self);
+                    result.complete(finish(auth));
+                } catch(Exception error){result.completeExceptionally(error);}
+            }
+        },executor);
+        return result;
+    }
+    private static CompletableFuture<TLObject> failedAuth(String code) {
+        CompletableFuture<TLObject> failed=new CompletableFuture<>();failed.completeExceptionally(new MaxException(code));return failed;
+    }
+
+    public String sessionVersion(){return client.device().profile.appVersion;}
+
+    public CompletableFuture<Map<String,Object>> accountSettings(){
+        return ensureLogin().thenCompose(unused->api.config()).thenApply(data->{
+            Object user=data.get("user");
+            if(!(user instanceof Map))throw new MaxException("MAX_ACCOUNT_SETTINGS_MISSING");
+            return new java.util.LinkedHashMap<>(Maps.object(user));
+        });
+    }
+    public CompletableFuture<Void> changeAccountSetting(String key,Object value){
+        return ensureLogin().thenCompose(unused->api.changeSetting(key,value)).thenCompose(unused->accountSettings()).thenAccept(settings->{
+            if(!value.equals(settings.get(key)))throw new MaxException("MAX_SETTING_NOT_CONFIRMED");
+        });
     }
 
     public MaxPrivacyPolicy privacy() { return privacy; }
@@ -207,7 +271,7 @@ public final class TgMaxRuntime {
         requests.keySet().forEach(this::cancel);
         if (reset) {
             privacyPreferences.edit().clear().apply();
-            archive.clear();
+            archive.reset();
             local.clear();
             client.close();
             executor.shutdownNow();
@@ -216,6 +280,7 @@ public final class TgMaxRuntime {
     }
 
     private CompletableFuture<TLObject> dispatch(TLObject request) {
+        if(importedAuth!=null&&!importedAuth.isDone())throw new MaxException("MAX_AUTH_IN_PROGRESS");
         if (request instanceof TLRPC.TL_auth_sendCode) {
             TLRPC.TL_auth_sendCode r = (TLRPC.TL_auth_sendCode) request;
             passwordTrack = null;
@@ -247,6 +312,50 @@ public final class TgMaxRuntime {
     }
 
     private CompletableFuture<TLObject> authenticated(TLObject request) {
+        if(request instanceof TLRPC.TL_contacts_getBlocked){
+            TLRPC.TL_contacts_getBlocked r=(TLRPC.TL_contacts_getBlocked)request;
+            if(r.my_stories_from)throw new MaxException("MAX_PRIVACY_KEY_UNSUPPORTED");
+            return blockedPage(0,new ArrayList<>()).thenApplyAsync(rows->{
+                models.snapshot(Maps.of("contacts",rows));models.blocked.clear();
+                for(Map<String,Object> row:rows)models.blocked.add(Maps.number(row.get("id")));
+                TLRPC.TL_contacts_blockedSlice result=new TLRPC.TL_contacts_blockedSlice();result.count=rows.size();
+                int first=Math.max(0,Math.min(rows.size(),r.offset)),last=Math.min(rows.size(),first+Math.max(1,r.limit));
+                for(Map<String,Object> row:rows.subList(first,last)){
+                    long raw=Maps.number(row.get("id"));TLRPC.TL_peerBlocked peer=new TLRPC.TL_peerBlocked();
+                    peer.peer_id=TgMaxModels.userPeer(ids.user(raw));peer.date=(int)(Maps.number(row.get("updateTime"),0)/1000);
+                    result.blocked.add(peer);result.users.add(models.user(raw));
+                }
+                return finish(result);
+            },executor);
+        }
+        if(request instanceof TLRPC.TL_contacts_block || request instanceof TLRPC.TL_contacts_unblock){
+            boolean blocked=request instanceof TLRPC.TL_contacts_block;
+            TLRPC.InputPeer peer=blocked?((TLRPC.TL_contacts_block)request).id:((TLRPC.TL_contacts_unblock)request).id;
+            if(!(peer instanceof TLRPC.TL_inputPeerUser))throw new MaxException("MAX_BLOCK_REQUIRES_USER");
+            long raw=ids.maxUser(peer.user_id);
+            return api.block(raw,blocked).thenApplyAsync(data->{if(blocked)models.blocked.add(raw);else models.blocked.remove(raw);return new TLRPC.TL_boolTrue();},executor);
+        }
+        if(request instanceof TLRPC.TL_users_getFullUser){
+            TLRPC.InputUser requested=((TLRPC.TL_users_getFullUser)request).id;
+            long raw=requested instanceof TLRPC.TL_inputUserSelf?models.self:ids.maxUser(requested.user_id);
+            return api.contacts(Collections.singletonList(raw)).thenApplyAsync(data->{
+                models.snapshot(data);TLRPC.TL_users_userFull result=new TLRPC.TL_users_userFull();
+                TLRPC.TL_userFull full=new TLRPC.TL_userFull();full.id=ids.user(raw);full.user=models.user(raw);
+                full.about=Maps.string(models.contacts.getOrDefault(raw,Maps.of()).get("description"));
+                if(!full.about.isEmpty())full.flags|=2;
+                full.blocked=models.blocked.contains(raw);if(full.blocked)full.flags|=1;
+                full.settings=new TLRPC.TL_peerSettings();full.notify_settings=new TLRPC.TL_peerNotifySettings();
+                result.full_user=full;result.users.addAll(models.users());return finish(result);
+            },executor);
+        }
+        if(request instanceof TL_account.updateProfile){
+            TL_account.updateProfile r=(TL_account.updateProfile)request;
+            TLRPC.User self=models.user(models.self);
+            String first=(r.flags&1)!=0?r.first_name:self.first_name,last=(r.flags&2)!=0?r.last_name:self.last_name;
+            String about=(r.flags&4)!=0?r.about:Maps.string(models.contacts.getOrDefault(models.self,Maps.of()).get("description"));
+            return api.changeProfile(first,last,about).thenApplyAsync(data->{models.snapshot(data);return finish(models.user(models.self));},executor);
+        }
+
         if (request instanceof TLRPC.TL_messages_setTyping) {
             TLRPC.TL_messages_setTyping r = (TLRPC.TL_messages_setTyping) request;
             return api.typing(serverChat(r.peer), r.action instanceof TLRPC.TL_sendMessageCancelAction)
@@ -382,12 +491,21 @@ public final class TgMaxRuntime {
         }
         if (request instanceof TLRPC.TL_auth_logOut) {
             return api.logout().handleAsync((data, failure) -> {
-                archive.clear();
+                archive.reset();
                 local.clear();
                 return new TLRPC.TL_auth_loggedOut();
             }, executor);
         }
         throw new MaxException("MAX_UNSUPPORTED_" + request.getClass().getSimpleName());
+    }
+
+    private CompletableFuture<List<Map<String,Object>>> blockedPage(int offset,List<Map<String,Object>> rows){
+        if(offset>=50000)throw new MaxException("MAX_BLOCKLIST_PAGINATION_LIMIT");
+        return api.blocked(offset,100).thenComposeAsync(data->{
+            if(!(data.get("contacts") instanceof List))throw new MaxException("MAX_BLOCKLIST_RESPONSE_MISSING");
+            List<Map<String,Object>> page=Maps.objects(data.get("contacts"));rows.addAll(page);
+            return page.size()<100?CompletableFuture.completedFuture(rows):blockedPage(offset+page.size(),rows);
+        },executor);
     }
 
     private CompletableFuture<Map<String, Object>> historyWindow(long chat, MaxHistoryQuery query, int backward) {

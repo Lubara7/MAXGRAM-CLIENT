@@ -77,6 +77,13 @@ assert (client / 'TMessagesProj/src/main/java/tw/nekomimi').exists()
 for qualifier in ['values', 'values-ru']:
     strings = {s.get('name'): s.text for s in ET.parse(resources / qualifier / 'strings.xml').findall('string')}
     assert all(strings.get(key) for key in ['TgMaxQrTitle', 'TgMaxGhost', 'TgMaxUnread', 'TgMaxNoTyping', 'TgMaxUnknownUser'])
-print('Pinned Nagram base, MAX QR, local privacy settings and financial menu removal checked')
+print('Pinned Nagram base, no login QR, local privacy settings and financial menu removal checked')
 
 assert 'TgMaxDisclaimer.showIfNeeded(this)' in (client / "TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java").read_text()
+
+account = (client / 'TMessagesProj/src/main/java/org/telegram/ui/UserInfoActivity.java').read_text()
+assert 'TgMaxAccountControls.showInactivity(this, currentAccount)' in account
+assert 'TgMaxPrivacyActivity(currentAccount)' in settings
+assert 'TgMaxSessionActivity' in (client / 'TMessagesProj/src/main/java/io/github/lubara7/tgmax/telegram/TgMaxPrivacyActivity.java').read_text()
+assert 'TgMaxTokenActivity' in login
+print('MAX account fields, privacy/session screens and explicit own-token login prepared')

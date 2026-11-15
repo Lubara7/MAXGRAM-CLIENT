@@ -28,11 +28,15 @@ public class MaxClientTest {
         server.shutdown();
     }
 
+    private MaxDevice legacyDevice(String id,String language,String os,String screen,String timezone,String agent) {
+        return new MaxDevice(id,language,os,screen,timezone,agent,MaxSessionProfile.legacyWeb("26.8.8"));
+    }
+
     private MaxClient start(WebSocketListener listener, long timeout) throws Exception {
         server.enqueue(new MockResponse().withWebSocketUpgrade(listener));
         server.start();
         client = new MaxClient(new OkHttpClient(),
-                new MaxDevice("synthetic-device", "en", "Android", "1080x1920", "UTC", "TG-MAX-Test"),
+                legacyDevice("synthetic-device", "en", "Android", "1080x1920", "UTC", "TG-MAX-Test"),
                 server.url("/websocket").toString(), timeout);
         return client;
     }
@@ -43,7 +47,7 @@ public class MaxClientTest {
             @Override public void onMessage(WebSocket ws, ByteString bytes) { respond(ws, codec.decode(bytes.toByteArray()), Maps.of()); }
         }));
         server.start();
-        client = new MaxClient(new OkHttpClient(), new MaxDevice("test", "en", "Android", "800x360 3.0x", "UTC", "test-browser"),
+        client = new MaxClient(new OkHttpClient(), legacyDevice("test", "en", "Android", "800x360 3.0x", "UTC", "test-browser"),
                 server.url("/websocket").toString(), 2000, () -> permission);
         CompletableFuture<Void> connection = client.connect();
         assertFalse(connection.isDone()); assertEquals(0, server.getRequestCount());
@@ -53,7 +57,7 @@ public class MaxClientTest {
 
     @Test public void declinedPermissionFailsEvenBeforeUserAgentReady() throws Exception {
         CompletableFuture<Void> permission = new CompletableFuture<>(); server.start();
-        client = new MaxClient(new OkHttpClient(), new MaxDevice("test", "en", "Android", "800x360 3.0x", "UTC", null),
+        client = new MaxClient(new OkHttpClient(), legacyDevice("test", "en", "Android", "800x360 3.0x", "UTC", null),
                 server.url("/websocket").toString(), 2000, () -> permission);
         CompletableFuture<Void> connection = client.connect();
         permission.completeExceptionally(new MaxException("MAX_CONSENT_DECLINED"));
@@ -73,7 +77,7 @@ public class MaxClientTest {
         };
         server.enqueue(new MockResponse().withWebSocketUpgrade(listener).setHeadersDelay(300, TimeUnit.MILLISECONDS));
         server.start();
-        MaxDevice device = new MaxDevice("0123456789abcdef", "en", "Android 14", "800x360 3.0x", "UTC", "browser-before");
+        MaxDevice device = legacyDevice("0123456789abcdef", "en", "Android 14", "800x360 3.0x", "UTC", "browser-before");
         client = new MaxClient(new OkHttpClient(), device, server.url("/websocket").toString(), 2000);
         CompletableFuture<Void> connection = client.connect();
         okhttp3.mockwebserver.RecordedRequest request = server.takeRequest(2, TimeUnit.SECONDS);
@@ -86,7 +90,7 @@ public class MaxClientTest {
 
     @Test public void closingBeforeBrowserInitializationCompletesWaiters() throws Exception {
         server.start();
-        MaxDevice device = new MaxDevice("0123456789abcdef", "en", "Android 14", "800x360 3.0x", "UTC", null);
+        MaxDevice device = legacyDevice("0123456789abcdef", "en", "Android 14", "800x360 3.0x", "UTC", null);
         client = new MaxClient(new OkHttpClient(), device, server.url("/websocket").toString(), 2000);
         CompletableFuture<Void> connection = client.connect();
         assertFalse(connection.isDone());

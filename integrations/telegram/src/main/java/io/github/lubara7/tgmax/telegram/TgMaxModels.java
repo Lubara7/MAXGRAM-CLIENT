@@ -18,6 +18,7 @@ final class TgMaxModels {
     final StableIds ids;
     final Map<Long, Map<String, Object>> chats = new LinkedHashMap<>();
     final Map<Long, Map<String, Object>> contacts = new LinkedHashMap<>();
+    final java.util.Set<Long> blocked=new java.util.HashSet<>();
     long self;
     private final MaxMessageArchive archive;
 
@@ -75,7 +76,10 @@ final class TgMaxModels {
         user.last_name = profile.lastName;
         if (user.first_name.isEmpty() && user.last_name.isEmpty())
             user.first_name = LocaleController.getString(R.string.TgMaxUnknownUser);
+        user.bot = contact.get("options") instanceof List && ((List<?>)contact.get("options")).contains("BOT");
         user.flags = 2;
+        if(user.bot)user.flags|=16384;
+        if(blocked.contains(rawId)){user.status=new TLRPC.TL_userStatusLastMonth();user.flags|=64;}
         if (!user.last_name.isEmpty()) user.flags |= 4;
         user.phone = profile.phone;
         if (!user.phone.isEmpty()) user.flags |= 16;

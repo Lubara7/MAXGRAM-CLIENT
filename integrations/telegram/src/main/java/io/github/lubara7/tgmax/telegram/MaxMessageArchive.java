@@ -93,6 +93,12 @@ final class MaxMessageArchive {
         finally { db = null; }
         if (!SQLiteDatabase.deleteDatabase(file) && file.exists()) storageFailed = true;
     }
+    synchronized void reset() {
+        context.getSharedPreferences("max_local_" + account,0).edit().clear().apply();
+        clear();
+        try {KeyStore store=KeyStore.getInstance("AndroidKeyStore");store.load(null);store.deleteEntry(context.getPackageName()+".max-archive."+account);}
+        catch(Exception failure){storageFailed=true;}
+    }
     private Map<String, Object> decode(long chat, long id, byte[] body) throws Exception {
         if (body.length < 28) throw new IllegalStateException("Invalid archive record");
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");

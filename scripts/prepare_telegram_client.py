@@ -172,6 +172,8 @@ def install_auth_translations(resources):
                 text = re.sub(pattern, lambda m: replacement, text, count=1)
             else:
                 text = text.replace("</resources>", "    " + replacement + "\n</resources>")
+        text = re.sub(r'(<string\s[^>]+>)([\s\S]*?)(</string>)',
+                lambda match: match[1] + re.sub(r"\b(?:Telegram|TELEGRAM)\b", "MAXGRAM", match[2]) + match[3], text)
         ET.fromstring(text)
         destination.write_text(text)
 
@@ -441,7 +443,23 @@ def restrict_max_ui(target):
     text = text.replace('showDialog(AlertsCreator.createSupportAlert(this, resourceProvider));', 'Browser.openUrl(getParentActivity(), "https://max.ru/support");')
     text = text.replace('LocaleController.getString(R.string.TelegramFaqUrl)', '"https://max.ru/support"')
     text = text.replace('Browser.openUrl(getParentActivity(), "https://telegram.org/privacy");', 'Browser.openUrl(getParentActivity(), "https://legal.max.ru/pp");')
+    text = text.replace('presentSettingFragment(new PrivacySettingsActivity());', 'presentSettingFragment(new ' + JAVA_PREFIX + 'TgMaxPrivacyActivity(currentAccount));')
+    text = re.sub(r'(?m)^\s*items.add\(SettingCell.Factory.of\(100,[^\n]+\n', '', text)
+    text = re.sub(r'(?m)^\s*items.add\(SettingCell.Factory.of\(7,[^\n]+\n', '', text)
     settings.write_text(text)
+
+    user_info = ui / "UserInfoActivity.java"
+    add_after_opening(user_info, r"protected void fillItems\(ArrayList<UItem> items, UniversalAdapter adapter\)", f"""        if ({runtime}.enabled()) {{
+            firstNameRow = items.size(); items.add(UItem.asCustom(firstNameEdit));
+            lastNameRow = items.size(); items.add(UItem.asCustom(lastNameEdit));
+            items.add(UItem.asShadow(-1, null));
+            bioRow = items.size(); items.add(UItem.asCustom(bioEdit));
+            items.add(UItem.asShadow(null));
+            items.add(SettingsActivity.SettingCell.Factory.of(1102, 0xFFF45255, 0xFFDF3955, R.drawable.msg_delete, getString(R.string.TgMaxDeleteInactive)));
+            return;
+        }}
+""")
+    add_after_opening(user_info, r"protected void onClick\(UItem item, View view, int position, float x, float y\)", f"        if (item.id == 1102) {{ {JAVA_PREFIX}TgMaxAccountControls.showInactivity(this, currentAccount); return; }}\n")
 
 
 def configure_phone_login(target):

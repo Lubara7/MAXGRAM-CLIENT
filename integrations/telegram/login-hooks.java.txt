@@ -41,6 +41,7 @@
 
     private ImageView maxLanguageButton;
     private ImageView maxHelpButton;
+    private ImageView maxTokenButton;
     private TextView maxPolicy;
 
     private void setupMaxLoginControls(Context context) {
@@ -54,6 +55,9 @@
         sizeNotifierFrameLayout.addView(maxLanguageButton, LayoutHelper.createFrame(32, 32, Gravity.RIGHT | Gravity.TOP, 16, 16, 64, 16));
         maxHelpButton = maxToolbarButton(context, R.drawable.maxgram_help, getString(R.string.TgMaxHelp), 16);
         maxHelpButton.setOnClickListener(v -> org.telegram.messenger.browser.Browser.openUrl(getParentActivity(), "https://max.ru/support"));
+        maxTokenButton = maxToolbarButton(context, R.drawable.maxgram_key, getString(R.string.TgMaxTokenLogin), 112);
+        maxTokenButton.setOnClickListener(v -> presentFragment(new io.github.lubara7.tgmax.telegram.TgMaxTokenActivity(currentAccount,
+                (result, failure) -> handleMaxVerification(new Bundle(), result, failure))));
         maxPolicy = new TextView(context);
         maxPolicy.setTextSize(11);
         maxPolicy.setGravity(Gravity.CENTER);
@@ -84,6 +88,7 @@
         int visibility = activityMode == MODE_LOGIN && currentViewNum == VIEW_PHONE_INPUT ? View.VISIBLE : View.GONE;
         if (maxLanguageButton != null) maxLanguageButton.setVisibility(visibility);
         if (maxHelpButton != null) maxHelpButton.setVisibility(visibility);
+        if (maxTokenButton != null) maxTokenButton.setVisibility(visibility);
         if (maxPolicy != null) maxPolicy.setVisibility(visibility);
     }
 
@@ -92,6 +97,7 @@
             ((android.view.ViewGroup.MarginLayoutParams) maxLanguageButton.getLayoutParams()).topMargin = dp(16) + statusBarHeight;
         }
         if (maxHelpButton != null) ((android.view.ViewGroup.MarginLayoutParams) maxHelpButton.getLayoutParams()).topMargin = dp(16) + statusBarHeight;
+        if (maxTokenButton != null) ((android.view.ViewGroup.MarginLayoutParams) maxTokenButton.getLayoutParams()).topMargin = dp(16) + statusBarHeight;
         if (maxPolicy != null && maxPolicy.getVisibility() == View.VISIBLE) {
             ((android.view.ViewGroup.MarginLayoutParams) maxPolicy.getLayoutParams()).bottomMargin = dp(8) + keyboardOffset;
         }

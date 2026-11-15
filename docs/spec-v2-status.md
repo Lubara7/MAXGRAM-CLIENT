@@ -7,7 +7,7 @@ The user's v2 specification supersedes the previous UI-base and login-language d
 - QR approval belongs in authenticated Settings → Devices. A new device displays a challenge; an authenticated device scans and approves it. The login-screen QR shortcut has been removed; authenticated approval is still pending.
 - Remove unsupported controls instead of sending unsupported Telegram RPCs. Local ghost/unread/no-typing remain MAX transport policies.
 - Android contacts, bot identity, presence, all media directions, formatting, internal links, MAX privacy/blacklist, profile navigation, automatic emoji animation, debug isolation, sounds and themes remain explicit acceptance items.
-- Account settings: first name, last name, biography and server-backed account deletion/inactivity options only. Opcode names 199/200 exist in Komet's map, but their payload and semantics still require confirmation; never imitate deletion with a local preference.
+- Account settings: first name, last name, biography and server-backed account deletion/inactivity options only. The official supplied APK confirms inactivity is CONFIG 22 with `settings.user.INACTIVE_TTL` (`1M`, `3M`, `6M`). Opcode 200 only reads a scheduled deletion timestamp. Account settings use the server inactivity field and read it back; immediate deletion is not imitated.
 - Opt-in deleted-message retention preserves messages received by this installation. It cannot recover messages deleted before receipt or while retention was disabled. Local delete, clear history and logout must have explicit purge behavior.
 
 ## Source review
@@ -45,7 +45,7 @@ Wire-specific profile models now separate WEB metadata from mobile `buildNumber`
 
 The Android adapter saves and restores its browser User-Agent. If none is stored, WebView initialization is posted to the main loop and the connection waits asynchronously. It no longer starts a restored session with a fabricated `MAXGRAM-CLIENT/...` browser header. One snapshot supplies both the HTTP User-Agent and INIT payload; closing while waiting for initialization fails pending requests. JVM tests cover delayed WebSocket upgrade/profile changes, closure before initialization, WEB/mobile field separation and identity preservation.
 
-The profile settings UI, explicit apply/relogin flow, token import and mobile TCP transport are still pending. First-launch consent is enforced before MAX connections, with RU/EN acknowledgement and refusal paths. The mobile payload model does not enable an Android/TCP login and must not be advertised as such. The legal-footer correction now reduces excess form gaps while keeping minimum separation; it still needs the next installed-APK test.
+Profile settings now expose R.S.V, reviewed version selection, next-login default updates and explicit apply/local sign-out. Own WEB-session import preserves the original INIT together with the token in an encrypted v2 record; previous v1 records remain readable. Mobile TCP transport is still pending. First-launch consent is enforced before MAX connections, with RU/EN acknowledgement and refusal paths. The mobile payload model does not enable an Android/TCP login and must not be advertised as such. The legal-footer correction now reduces excess form gaps while keeping minimum separation; it still needs the next installed-APK test.
 
 
 ## History and deleted-copy checkpoint (2026-11-15)
@@ -55,3 +55,9 @@ MAX history uses timestamps; Telegram uses an anchor message and signed addition
 Deletion notifications differ: WEB sends a `REMOVED` message with opcode 128, while mobile also uses opcode 142 with a chat object and message IDs. The normalizer follows pinned PyMax `types/events/message.py` and `dispatch/resolvers.py`. Edits are not treated as new messages.
 
 Deleted-copy retention is opt-in, per account and limited to snapshots received after activation. Message bodies use Android Keystore AES-256-GCM with chat/message-bound authentication data in a no-backup SQLite store. Retained messages carry a visible local-copy label. The adapter purges explicit own deletions, disabling retention and logout; archive failures must not prevent ordinary incoming messages from rendering. Android instrumentation covers encryption, account isolation, disabled defaults, unknown messages and purge behavior. Live MAX integration remains pending.
+
+
+Account controls use the native Nagram first-name, last-name and biography fields plus a server inactivity selector. Privacy uses only the six MAX controls confirmed in PyMax and the supplied APK, with CONFIG read-back after updates. Blocklist retrieval paginates MAX contacts with status BLOCKED; block/unblock uses contactId/action rather than Telegram endpoints. Profile loading now maps MAX contact descriptions into native user-full responses. These are source/fixture implementations pending live-account checks, not acceptance claims.
+
+
+WEB wire-format correction: pinned PyMax `protocol/ws/protocol.py` uses text JSON v11, whereas the previous Komet-derived codec sends binary v10. New WEB and imported browser profiles now use JSON v11. Legacy saved profiles retain binary v10 until explicit relogin. The JSON decoder preserves 64-bit IDs exactly, bounds nesting, checks reply/opcode correlation and rejects unexpected wire formats. WEB login omits binary-only fingerprint/experiment fields. Mock WebSocket tests cover INIT → CAPTCHA → auth, token login, large IDs and consent. No live session has been used to claim compatibility.

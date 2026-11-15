@@ -1,6 +1,6 @@
 # Official Telegram / MAX integration
 
-The Android UI is built from official DrKLO/Telegram 13.2.2 (7303), pinned to `21f7d109da6ab3506c9e9577f98c6a38771ab335`. `upstream/telegram` is the application source. `upstream/nagramxf` is a reference-only pin for selected privacy behavior; its application, menus, plugins and controllers are not compiled.
+The active Android UI is NextAlone/Nagram, pinned to `8f2a8a03aa7aec599150b09d302bfd5023283344` under GPL v3. `upstream/nagram` is the application source; DrKLO and NagramXF pins remain compatibility and selected-behavior references.
 
 `prepare_telegram_client.py` creates a modified checkout, installs the MAX adapter, keeps the native Telegram UI and animation engine, removes MTProto socket/handshake/datacenter sources from the native graph, guards Java transport entry points and disables Telegram API credentials, updates, push registration and billing initialization. The release packager checks the compiled ARM64 graph. A complete network egress audit remains outstanding.
 
