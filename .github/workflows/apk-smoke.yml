@@ -113,6 +113,8 @@ jobs:
           path: |
             codec-smoke.txt
             codec-logcat.txt
+            disclaimer.xml
+            disclaimer.png
             login.xml
             login*.xml
             login*.png

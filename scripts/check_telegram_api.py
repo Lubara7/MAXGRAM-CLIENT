@@ -155,7 +155,7 @@ public class LocaleController {
  public HashMap<String,LocaleInfo> languagesDict,remoteLanguagesDict;
  public static class LocaleInfo {
 """ + locale_fields + "\n}\n}\n")
-    write(stubs / "org/telegram/messenger/R.java", "package org.telegram.messenger; public class R { public static class string { public static final int TgMaxUnknownUser=1; } }\n")
+    write(stubs / "org/telegram/messenger/R.java", "package org.telegram.messenger; public class R { public static class string { public static final int TgMaxUnknownUser=1, TgMaxDeletedMessage=2; } }\n")
     android = args.android_jar
     if android is None:
         sdk = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")

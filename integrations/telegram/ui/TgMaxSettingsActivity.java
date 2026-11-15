@@ -17,7 +17,7 @@ import org.telegram.ui.Components.LayoutHelper;
 
 public final class TgMaxSettingsActivity extends BaseFragment {
     private final TgMaxRuntime runtime;
-    private TextCheckCell ghost, unread, typing;
+    private TextCheckCell ghost, unread, typing, keepDeleted;
 
     public TgMaxSettingsActivity(int account) { setCurrentAccount(account); runtime = TgMaxRuntime.get(account); }
 
@@ -49,12 +49,28 @@ public final class TgMaxSettingsActivity extends BaseFragment {
             refresh();
         });
         info(context, list, R.string.TgMaxGhostInfo);
+        keepDeleted = row(context, list, R.string.TgMaxKeepDeleted, () -> {
+            boolean enable = !runtime.keepsDeletedMessages();
+            Runnable apply = () -> {
+                keepDeleted.setEnabled(false);
+                runtime.keepDeletedMessages(enable).whenComplete((unused, error) -> AndroidUtilities.runOnUIThread(() -> {
+                    if (fragmentView == null) return;
+                    keepDeleted.setEnabled(true); refresh();
+                    if (error != null) showDialog(new org.telegram.ui.ActionBar.AlertDialog.Builder(getParentActivity()).setMessage(LocaleController.getString(R.string.ErrorOccurred)).setPositiveButton(LocaleController.getString(R.string.OK), null).create());
+                }));
+            };
+            showDialog(new org.telegram.ui.ActionBar.AlertDialog.Builder(getParentActivity()).setTitle(LocaleController.getString(R.string.TgMaxKeepDeleted))
+                    .setMessage(LocaleController.getString(enable ? R.string.TgMaxKeepDeletedInfo : R.string.TgMaxKeepDeletedDisable))
+                    .setPositiveButton(LocaleController.getString(R.string.OK), (dialog, which) -> apply.run())
+                    .setNegativeButton(LocaleController.getString(R.string.Cancel), null).create());
+        });
         refresh();
         return fragmentView;
     }
 
     private void refresh() {
         MaxPrivacyPolicy p = runtime.privacy();
+        if (keepDeleted != null) keepDeleted.setChecked(runtime.keepsDeletedMessages());
         ghost.setChecked(p.ghost);
         unread.setChecked(!p.sendsRead());
         typing.setChecked(!p.sendsTyping());

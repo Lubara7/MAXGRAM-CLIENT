@@ -2,9 +2,9 @@
 
 The user's v2 specification supersedes the previous UI-base and login-language decisions:
 
-- Requested Android base: NextAlone/Nagram, main commit `8f2a8a03aa7aec599150b09d302bfd5023283344` inspected on 2026-11-14. Migration is pending; existing builds still use the separately pinned DrKLO base.
-- Login languages: Russian and English. The existing seven-language picker must be reduced during the UI migration.
-- QR approval belongs in authenticated Settings → Devices. A new device displays a challenge; an authenticated device scans and approves it. The login-screen QR shortcut is to be removed.
+- Requested Android base: NextAlone/Nagram, main commit `8f2a8a03aa7aec599150b09d302bfd5023283344` inspected on 2026-11-14. The active build now uses this Nagram pin. Historical published APKs still use the previous DrKLO base.
+- Login languages: Russian and English. The prepared Nagram interface is restricted to these two languages.
+- QR approval belongs in authenticated Settings → Devices. A new device displays a challenge; an authenticated device scans and approves it. The login-screen QR shortcut has been removed; authenticated approval is still pending.
 - Remove unsupported controls instead of sending unsupported Telegram RPCs. Local ghost/unread/no-typing remain MAX transport policies.
 - Android contacts, bot identity, presence, all media directions, formatting, internal links, MAX privacy/blacklist, profile navigation, automatic emoji animation, debug isolation, sounds and themes remain explicit acceptance items.
 - Account settings: first name, last name, biography and server-backed account deletion/inactivity options only. Opcode names 199/200 exist in Komet's map, but their payload and semantics still require confirmation; never imitate deletion with a local preference.
@@ -45,4 +45,13 @@ Wire-specific profile models now separate WEB metadata from mobile `buildNumber`
 
 The Android adapter saves and restores its browser User-Agent. If none is stored, WebView initialization is posted to the main loop and the connection waits asynchronously. It no longer starts a restored session with a fabricated `MAXGRAM-CLIENT/...` browser header. One snapshot supplies both the HTTP User-Agent and INIT payload; closing while waiting for initialization fails pending requests. JVM tests cover delayed WebSocket upgrade/profile changes, closure before initialization, WEB/mobile field separation and identity preservation.
 
-The profile settings UI, explicit apply/relogin flow, first-launch consent, token import and mobile TCP transport are still pending. The mobile payload model does not enable an Android/TCP login and must not be advertised as such. The legal-footer correction now reduces excess form gaps while keeping minimum separation; it still needs the next installed-APK test.
+The profile settings UI, explicit apply/relogin flow, token import and mobile TCP transport are still pending. First-launch consent is enforced before MAX connections, with RU/EN acknowledgement and refusal paths. The mobile payload model does not enable an Android/TCP login and must not be advertised as such. The legal-footer correction now reduces excess form gaps while keeping minimum separation; it still needs the next installed-APK test.
+
+
+## History and deleted-copy checkpoint (2026-11-15)
+
+MAX history uses timestamps; Telegram uses an anchor message and signed additional offsets. The adapter now keeps the anchor millisecond, sorts by time and server ID, supports older/newer/around offsets and filters min/max local IDs. Dense timestamp boundaries expand the MAX window instead of silently returning an empty page. Chat metadata is hydrated from the history response.
+
+Deletion notifications differ: WEB sends a `REMOVED` message with opcode 128, while mobile also uses opcode 142 with a chat object and message IDs. The normalizer follows pinned PyMax `types/events/message.py` and `dispatch/resolvers.py`. Edits are not treated as new messages.
+
+Deleted-copy retention is opt-in, per account and limited to snapshots received after activation. Message bodies use Android Keystore AES-256-GCM with chat/message-bound authentication data in a no-backup SQLite store. Retained messages carry a visible local-copy label. The adapter purges explicit own deletions, disabling retention and logout; archive failures must not prevent ordinary incoming messages from rendering. Android instrumentation covers encryption, account isolation, disabled defaults, unknown messages and purge behavior. Live MAX integration remains pending.

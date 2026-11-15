@@ -132,8 +132,14 @@ public final class MaxApi {
     }
 
     public CompletableFuture<Map<String, Object>> history(long chatId, long from, int count) {
-        return client.request(MaxOpcode.HISTORY, Maps.of("chatId", chatId, "from", from, "forward", 0,
-                "backward", Math.min(100, Math.max(1, count)), "getMessages", true));
+        return history(chatId, from, Math.min(100, Math.max(1, count)), 0);
+    }
+
+    public CompletableFuture<Map<String, Object>> history(long chatId, long from, int backward, int forward) {
+        if (backward < 0 || forward < 0 || backward > 4096 || forward > 4096) throw new MaxException("MAX_HISTORY_WINDOW_INVALID");
+        return client.request(MaxOpcode.HISTORY, Maps.of("chatId", chatId, "from", from, "forward", forward,
+                "backward", backward, "backwardTime", 0, "forwardTime", 0, "itemType", "REGULAR",
+                "getChat", true, "getMessages", true, "interactive", false));
     }
 
     public CompletableFuture<Map<String, Object>> sendText(long chatId, String text, long clientId, boolean notify, Long replyId) {

@@ -25,10 +25,12 @@ public class CodecDeviceSmoke {
             if (!(payload.get("codeLength") instanceof Number) || ((Number) payload.get("codeLength")).intValue() != 6)
                 throw new AssertionError("Verification code length mismatch");
         }
-        System.out.println("Published APK decoded Zstandard (known/unknown size), LZ4 and nested MessagePack auth fixtures on Android");
+        System.out.println("Prototype APK decoded Zstandard (known/unknown size), LZ4 and nested MessagePack auth fixtures on Android");
     }
 
-    public static void verifyLocalFeatures(ClassLoader loader) throws Exception {
+    public static void verifyLocalFeatures(ClassLoader loader, android.content.Context context) throws Exception {
+        verifyArchive(loader, context);
+        verifyCacheMigration(loader, context);
         Class.forName("io.github.lubara7.tgmax.telegram.TgMaxQrActivity", true, loader);
         Class.forName("io.github.lubara7.tgmax.telegram.TgMaxSettingsActivity", true, loader);
         Class<?> runtime = Class.forName("io.github.lubara7.tgmax.telegram.TgMaxRuntime", true, loader);
@@ -75,6 +77,59 @@ public class CodecDeviceSmoke {
         Object groupImage = image.getMethod("getForChat", int.class, Class.forName("org.telegram.tgnet.TLRPC$Chat", true, loader), int.class)
                 .invoke(null, 1, chat, small);
         if (!group.get("baseIconUrl").equals(image.getField("path").get(groupImage))) throw new AssertionError("MAX group avatar URL mismatch");
-        System.out.println("Published APK loaded MAX QR/local settings and isolated privacy between accounts");
+        System.out.println("Prototype APK loaded MAX QR/local settings and isolated privacy between accounts");
     }
+    private static void verifyArchive(ClassLoader loader, android.content.Context context) throws Exception {
+        Class<?> type = Class.forName("io.github.lubara7.tgmax.telegram.MaxMessageArchive", true, loader);
+        java.lang.reflect.Constructor<?> constructor = type.getDeclaredConstructor(android.content.Context.class, int.class); constructor.setAccessible(true);
+        Object store = constructor.newInstance(context, 10007), other = constructor.newInstance(context, 10008);
+        java.lang.reflect.Method enabled = type.getDeclaredMethod("enabled", boolean.class), observe = type.getDeclaredMethod("observe", long.class, Map.class),
+                retain = type.getDeclaredMethod("retain", long.class, long.class), clear = type.getDeclaredMethod("clear");
+        for (java.lang.reflect.Method m : new java.lang.reflect.Method[] {enabled, observe, retain, clear}) m.setAccessible(true);
+        Map<String,Object> message = new java.util.HashMap<>(); message.put("id", 101L); message.put("time", 1234567L); message.put("text", "private archive fixture");
+        try {
+            enabled.invoke(store, false); observe.invoke(store, 99L, message);
+            if (retain.invoke(store, 99L, 101L) != null) throw new AssertionError("Retention enabled by default");
+            enabled.invoke(store, true); enabled.invoke(other, true); observe.invoke(store, 99L, message);
+            Map<?,?> copy = (Map<?,?>) retain.invoke(store, 99L, 101L);
+            if (copy == null || !Boolean.TRUE.equals(copy.get("maxgram_deleted")) || !message.get("text").equals(copy.get("text"))) throw new AssertionError("Archive round trip failed");
+            if (retain.invoke(other, 99L, 101L) != null || retain.invoke(store, 99L, 202L) != null) throw new AssertionError("Archive crossed account boundary or invented a copy");
+            byte[] bytes = java.nio.file.Files.readAllBytes(new java.io.File(context.getNoBackupFilesDir(), "max-archive-10007.db").toPath());
+            if (new String(bytes, java.nio.charset.StandardCharsets.ISO_8859_1).contains("private archive fixture")) throw new AssertionError("Archive contains cleartext message body");
+            enabled.invoke(store, false); enabled.invoke(store, true);
+            if (retain.invoke(store, 99L, 101L) != null) throw new AssertionError("Disable kept deleted copies");
+        } finally { enabled.invoke(store, false); enabled.invoke(other, false); clear.invoke(store); clear.invoke(other); }
+    }
+    private static void sql(Object db, String sql) throws Exception {
+        Object statement = db.getClass().getMethod("executeFast", String.class).invoke(db, sql);
+        try { statement.getClass().getMethod("stepThis").invoke(statement); }
+        finally { statement.getClass().getMethod("dispose").invoke(statement); }
+    }
+    private static int integer(Object db, String sql) throws Exception {
+        return ((Number) db.getClass().getMethod("executeInt", String.class, Object[].class).invoke(db, sql, new Object[0])).intValue();
+    }
+    private static void verifyCacheMigration(ClassLoader loader, android.content.Context context) throws Exception {
+        Class<?> database = Class.forName("org.telegram.SQLite.SQLiteDatabase", true, loader);
+        Class<?> migration = Class.forName("io.github.lubara7.tgmax.telegram.TgMaxCacheMigration", true, loader);
+        for (int version : new int[] {0,179,180,181}) {
+            java.io.File path = java.io.File.createTempFile("maxgram-migration-", ".db", context.getCacheDir()); path.delete();
+            Object db = database.getConstructor(String.class).newInstance(path.getAbsolutePath());
+            try {
+                sql(db, "CREATE TABLE messages_v2(mid INTEGER PRIMARY KEY,data TEXT)"); sql(db, "INSERT INTO messages_v2 VALUES(42,'keep-message')");
+                sql(db, "PRAGMA user_version="+version);
+                if (version==180) {
+                    sql(db, "CREATE TABLE widget_state(uid INTEGER,mid INTEGER,height INTEGER,local TEXT,PRIMARY KEY(uid,mid))");
+                    sql(db, "INSERT INTO widget_state VALUES(1,42,64,'keep-widget')");
+                    sql(db, "CREATE TABLE widget_heights(uid INTEGER,mid INTEGER,width INTEGER,height INTEGER,date INTEGER,PRIMARY KEY(uid,mid,width))");
+                    sql(db, "INSERT INTO widget_heights VALUES(1,42,100,64,123)");
+                }
+                migration.getMethod("ensureCurrent",database).invoke(null,db);
+                if (version==0) sql(db,"PRAGMA user_version=181"); else migration.getMethod("migrate",database,int.class).invoke(null,db,version);
+                migration.getMethod("ensureCurrent",database).invoke(null,db);
+                if (integer(db,"PRAGMA user_version")!=181 || integer(db,"SELECT COUNT(*) FROM messages_v2 WHERE data='keep-message'")!=1) throw new AssertionError("Lost cache history at "+version);
+                if (version==180 && (integer(db,"SELECT COUNT(*) FROM widget_state WHERE local='keep-widget'")!=1 || integer(db,"SELECT COUNT(*) FROM maxgram_widget_state_180_backup WHERE height=64")!=1 || integer(db,"SELECT COUNT(*) FROM widget_heights WHERE anchor=0")!=1)) throw new AssertionError("Lost widget cache");
+            } finally { database.getMethod("close").invoke(db); path.delete(); }
+        }
+    }
+
 }

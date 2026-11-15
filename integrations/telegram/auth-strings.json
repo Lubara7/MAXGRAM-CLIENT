@@ -32,7 +32,11 @@
     "TgMaxUnofficialTitle": "Unofficial client",
     "TgMaxUnofficialWarning": "MaxGram is an unofficial client. MAX may restrict or block accounts using third-party clients. Use at your own risk. The developer cannot guarantee that your account will not be blocked.",
     "TgMaxRiskAccept": "I understand the risk",
-    "TgMaxRiskDecline": "Close"
+    "TgMaxRiskDecline": "Close",
+    "TgMaxDeletedMessage": "Deleted · local copy",
+    "TgMaxKeepDeleted": "Keep deleted messages",
+    "TgMaxKeepDeletedInfo": "Save encrypted copies of messages this device receives after you enable this option. Server-deleted messages stay on this device and are marked as local copies. This cannot recover messages you never received. Your own deletions and logout remove the copies.",
+    "TgMaxKeepDeletedDisable": "Turn off retention and delete the saved copies of deleted messages?"
   },
   "values-ru": {
     "TgMaxLanguageTitle": "На каком языке продолжить?",
@@ -67,7 +71,11 @@
     "TgMaxUnofficialTitle": "Неофициальный клиент",
     "TgMaxUnofficialWarning": "MaxGram — неофициальный клиент. MAX может ограничивать или блокировать аккаунты за использование сторонних клиентов. Используйте на свой риск. Разработчик не может гарантировать отсутствие блокировки.",
     "TgMaxRiskAccept": "Я понимаю риск",
-    "TgMaxRiskDecline": "Закрыть"
+    "TgMaxRiskDecline": "Закрыть",
+    "TgMaxDeletedMessage": "Удалено · локальная копия",
+    "TgMaxKeepDeleted": "Сохранять удалённые сообщения",
+    "TgMaxKeepDeletedInfo": "Сохранять зашифрованные копии сообщений, полученных этим устройством после включения. Удалённые на сервере сообщения останутся только здесь с отметкой о локальной копии. Ранее не полученные сообщения восстановить нельзя. Ваше удаление сообщения и выход из аккаунта удаляют копии.",
+    "TgMaxKeepDeletedDisable": "Отключить сохранение и удалить локальные копии удалённых сообщений?"
   },
   "values-es": {
     "TgMaxLanguageTitle": "¿En qué idioma quieres continuar?",

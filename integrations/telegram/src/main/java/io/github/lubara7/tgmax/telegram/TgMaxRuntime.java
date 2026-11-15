@@ -28,6 +28,7 @@ public final class TgMaxRuntime {
     private final MaxLocalState local;
     private final StableIds ids;
     private final TgMaxModels models;
+    private final MaxMessageArchive archive;
     private final MaxClient client;
     private final MaxApi api;
     private final android.content.SharedPreferences privacyPreferences;
@@ -83,7 +84,8 @@ public final class TgMaxRuntime {
                 privacyPreferences.getBoolean("unread", false), privacyPreferences.getBoolean("noTyping", false));
         local = new MaxLocalState(context, account);
         ids = new StableIds(local);
-        models = new TgMaxModels(ids);
+        archive = new MaxMessageArchive(context, account);
+        models = new TgMaxModels(ids, archive);
         executor = Executors.newSingleThreadExecutor(r -> { Thread t = new Thread(r, "tgmax-account-" + account); t.setDaemon(true); return t; });
         android.util.DisplayMetrics display = context.getResources().getDisplayMetrics();
         String version = local.profileVersion(recommendedWebVersion(context));
@@ -205,6 +207,7 @@ public final class TgMaxRuntime {
         requests.keySet().forEach(this::cancel);
         if (reset) {
             privacyPreferences.edit().clear().apply();
+            archive.clear();
             local.clear();
             client.close();
             executor.shutdownNow();
@@ -256,7 +259,11 @@ public final class TgMaxRuntime {
             return api.sessions().thenApply(TgMaxModels::sessions);
         }
         if (request instanceof TLRPC.TL_auth_resetAuthorizations) {
-            return api.terminateOtherSessions().thenApply(data -> new TLRPC.TL_boolTrue());
+            return api.terminateOtherSessions().thenApplyAsync(data -> {
+                String token = Maps.string(data.get("token"));
+                if (!token.isEmpty()) { sessionToken = token; local.session(models.self, token); }
+                return new TLRPC.TL_boolTrue();
+            }, executor);
         }
         if (request instanceof TLRPC.TL_messages_getDialogs) {
             TLRPC.TL_messages_getDialogs r = (TLRPC.TL_messages_getDialogs) request;
@@ -266,8 +273,25 @@ public final class TgMaxRuntime {
         if (request instanceof TLRPC.TL_messages_getHistory) {
             TLRPC.TL_messages_getHistory r = (TLRPC.TL_messages_getHistory) request;
             long chat = serverChat(r.peer);
-            long from = r.offset_id == 0 ? System.currentTimeMillis() + 86_400_000L : ids.message(r.offset_id).time - 1;
-            return api.history(chat, from, r.limit).thenApplyAsync(data -> finish(models.history(chat, data)), executor);
+            StableIds.MessageId anchor = r.offset_id == 0 ? null : ids.message(r.offset_id);
+            if (anchor != null && anchor.chat != chat) throw new MaxException("MAX_MESSAGE_PEER_MISMATCH");
+            long time = anchor != null ? anchor.time : r.offset_date != 0 ? (long) r.offset_date * 1000 : System.currentTimeMillis();
+            MaxHistoryQuery query = new MaxHistoryQuery(time, anchor == null ? 0 : anchor.server, anchor != null, r.limit, r.add_offset);
+            return historyWindow(chat, query, query.backward).thenApplyAsync(data -> {
+                models.snapshot(data);
+                List<Map<String, Object>> rows = Maps.objects(data.get("messages"));
+                for (Map<String, Object> row : rows) archive.observe(chat, row);
+                long lower = rows.stream().mapToLong(row -> Maps.number(row.get("time"))).min().orElse(0);
+                long upper = Math.max(query.from, rows.stream().mapToLong(row -> Maps.number(row.get("time"))).max().orElse(query.from));
+                rows.addAll(archive.deleted(chat, lower, upper, 4096));
+                ids.reserveHistory(chat, rows);
+                if (r.max_id != 0 || r.min_id != 0) rows.removeIf(row -> {
+                    int id = ids.message(chat, Maps.number(row.get("id")), Maps.number(row.get("time")));
+                    return r.max_id != 0 && id >= r.max_id || r.min_id != 0 && id <= r.min_id;
+                });
+                data.put("messages", query.select(rows));
+                return finish(models.history(chat, data));
+            }, executor);
         }
         if (request instanceof TLRPC.TL_messages_sendMessage) {
             TLRPC.TL_messages_sendMessage r = (TLRPC.TL_messages_sendMessage) request;
@@ -358,11 +382,20 @@ public final class TgMaxRuntime {
         }
         if (request instanceof TLRPC.TL_auth_logOut) {
             return api.logout().handleAsync((data, failure) -> {
+                archive.clear();
                 local.clear();
                 return new TLRPC.TL_auth_loggedOut();
             }, executor);
         }
         throw new MaxException("MAX_UNSUPPORTED_" + request.getClass().getSimpleName());
+    }
+
+    private CompletableFuture<Map<String, Object>> historyWindow(long chat, MaxHistoryQuery query, int backward) {
+        return api.history(chat, query.from, backward, query.forward).thenComposeAsync(data -> {
+            if (!query.boundaryNeedsExpansion(Maps.objects(data.get("messages")))) return CompletableFuture.completedFuture(data);
+            if (backward >= 4096) throw new MaxException("MAX_HISTORY_BOUNDARY_LIMIT");
+            return historyWindow(chat, query, Math.min(4096, backward * 2));
+        }, executor);
     }
 
     private synchronized CompletableFuture<Void> ensureLogin() {
@@ -530,7 +563,10 @@ public final class TgMaxRuntime {
             if (entry.chat != chat) throw new MaxException("MAX_DELETE_MULTIPLE_PEERS_UNSUPPORTED");
             serverIds.add(entry.server);
         }
-        return api.delete(chat, serverIds, everyone).thenApplyAsync(data -> finish(affected(chat, true)), executor);
+        return api.delete(chat, serverIds, everyone).thenApplyAsync(data -> {
+            for (long id : serverIds) archive.forget(chat, id);
+            return finish(affected(chat, true));
+        }, executor);
     }
 
     private CompletableFuture<TLObject> read(long chat, int localId) {
@@ -573,21 +609,57 @@ public final class TgMaxRuntime {
     private void push(MaxFrame frame) {
         if (models.self == 0) return;
         Map<String, Object> data = Maps.object(frame.payload);
-        if (frame.opcode == MaxOpcode.MESSAGE) {
-            long chat = Maps.number(data.get("chatId"), 0);
-            Map<String, Object> raw = Maps.object(data.get("message"));
-            if (chat == 0 || raw.isEmpty()) return;
-            CompletableFuture<Map<String, Object>> ensure = models.chats.containsKey(chat)
-                    ? CompletableFuture.completedFuture(Maps.of()) : api.chatInfo(chat);
+        if (frame.opcode == MaxOpcode.MESSAGE || frame.opcode == 142 || frame.opcode == MaxOpcode.EDIT) {
+            MaxMessageEvent event = new MaxMessageEvent(frame.opcode, data);
+            if (data.get("chat") instanceof Map) models.snapshot(Maps.of("chat", data.get("chat")));
+            CompletableFuture<Map<String, Object>> ensure = models.chats.containsKey(event.chat)
+                    ? CompletableFuture.completedFuture(Maps.of()) : api.chatInfo(event.chat);
             ensure.thenAcceptAsync(info -> {
                 models.snapshot(info);
-                TLRPC.TL_updates updates = finish(update(models.message(chat, raw), false));
-                Utilities.stageQueue.postRunnable(() -> MessagesController.getInstance(account).processUpdates(updates, false));
+                if (!event.deleted.isEmpty()) {
+                    ArrayList<Integer> removed = new ArrayList<>();
+                    for (long id : event.deleted) {
+                        Map<String, Object> retained = archive.retain(event.chat, id);
+                        if (retained != null) deliver(update(models.message(event.chat, retained), true));
+                        else { StableIds.MessageId localId = ids.findMessage(event.chat, id); if (localId != null) removed.add(localId.local); }
+                    }
+                    if (!removed.isEmpty()) deliver(deletedUpdates(event.chat, removed));
+                } else deliver(update(models.message(event.chat, event.message), event.edited));
             }, executor);
         } else if (frame.opcode == MaxOpcode.CHAT_UPDATE) {
-            models.snapshot(Maps.of("chats", Collections.singletonList(data.get("chat"))));
-            ids.flush();
+            models.snapshot(Maps.of("chats", Collections.singletonList(data.get("chat")))); ids.flush();
         }
+    }
+
+    private void deliver(TLRPC.TL_updates updates) {
+        finish(updates);
+        Utilities.stageQueue.postRunnable(() -> MessagesController.getInstance(account).processUpdates(updates, false));
+    }
+
+    private TLRPC.TL_updates deletedUpdates(long chat, ArrayList<Integer> idsToDelete) {
+        TLRPC.TL_updates result = new TLRPC.TL_updates();
+        TLRPC.Peer peer = models.peer(models.requireChat(chat));
+        if (peer.channel_id != 0) {
+            TL_update.TL_updateDeleteChannelMessages update = new TL_update.TL_updateDeleteChannelMessages();
+            update.channel_id = peer.channel_id; update.messages = idsToDelete;
+            update.pts = models.pts(TgMaxModels.dialogId(peer), true); update.pts_count = 1; result.updates.add(update);
+        } else {
+            TL_update.TL_updateDeleteMessages update = new TL_update.TL_updateDeleteMessages();
+            update.messages = idsToDelete; update.pts = models.pts(TgMaxModels.dialogId(peer), true); update.pts_count = 1; result.updates.add(update);
+        }
+        result.date = now(); return result;
+    }
+
+    public boolean keepsDeletedMessages() { return archive.enabled(); }
+    public CompletableFuture<Void> keepDeletedMessages(boolean enabled) {
+        return CompletableFuture.runAsync(() -> {
+            if (!enabled) for (Map.Entry<Long, List<Long>> entry : archive.retainedIds().entrySet()) {
+                ArrayList<Integer> localIds = new ArrayList<>();
+                for (long id : entry.getValue()) { StableIds.MessageId local = ids.findMessage(entry.getKey(), id); if (local != null) localIds.add(local.local); }
+                if (!localIds.isEmpty() && models.chats.containsKey(entry.getKey())) deliver(deletedUpdates(entry.getKey(), localIds));
+            }
+            archive.enabled(enabled);
+        }, executor);
     }
 
     private long serverChat(TLRPC.InputPeer peer) {

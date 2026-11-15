@@ -19,8 +19,9 @@ final class TgMaxModels {
     final Map<Long, Map<String, Object>> chats = new LinkedHashMap<>();
     final Map<Long, Map<String, Object>> contacts = new LinkedHashMap<>();
     long self;
+    private final MaxMessageArchive archive;
 
-    TgMaxModels(StableIds ids) { this.ids = ids; }
+    TgMaxModels(StableIds ids, MaxMessageArchive archive) { this.ids = ids; this.archive = archive; }
 
     synchronized void snapshot(Map<String, Object> data) {
         Map<String, Object> profile = Maps.object(Maps.object(data.get("profile")).get("contact"));
@@ -36,10 +37,12 @@ final class TgMaxModels {
             merged.putAll(contact);
             contacts.put(id, merged);
         }
-        for (Map<String, Object> chat : Maps.objects(data.get("chats"))) {
+        List<Map<String, Object>> chatRows = new ArrayList<>(Maps.objects(data.get("chats")));
+        if (data.get("chat") instanceof Map) chatRows.add(Maps.object(data.get("chat")));
+        for (Map<String, Object> chat : chatRows) {
             long id = Maps.number(chat.get("id"));
-            chats.put(id, chat);
-            peer(chat);
+            Map<String, Object> merged = new LinkedHashMap<>(chats.getOrDefault(id, Collections.emptyMap()));
+            merged.putAll(chat); chats.put(id, merged); peer(merged);
         }
     }
 
@@ -176,6 +179,7 @@ final class TgMaxModels {
     }
 
     synchronized TLRPC.Message message(long rawChatId, Map<String, Object> raw) {
+        archive.observe(rawChatId, raw);
         TLRPC.TL_message message = new TLRPC.TL_message();
         long serverId = Maps.number(raw.get("id"));
         long time = Maps.number(raw.get("time"));
@@ -189,6 +193,7 @@ final class TgMaxModels {
         message.post = "CHANNEL".equals(rawChat.get("type"));
         message.date = (int) (time / 1000);
         message.message = Maps.string(raw.get("text"));
+        if (Boolean.TRUE.equals(raw.get("maxgram_deleted"))) message.message += "\n[" + LocaleController.getString(R.string.TgMaxDeletedMessage) + "]";
         message.media = new TLRPC.TL_messageMediaEmpty();
         message.flags = 256;
         Object mark = Maps.object(rawChat.get("participants")).get(Long.toString(self));
