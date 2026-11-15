@@ -28,7 +28,11 @@
     "YourPasswordHeader": "Password",
     "EnterPassword": "Password",
     "LoginPasswordTextShort": "Enter your MAX account password.",
-    "SearchCountry": "Search"
+    "SearchCountry": "Search",
+    "TgMaxUnofficialTitle": "Unofficial client",
+    "TgMaxUnofficialWarning": "MaxGram is an unofficial client. MAX may restrict or block accounts using third-party clients. Use at your own risk. The developer cannot guarantee that your account will not be blocked.",
+    "TgMaxRiskAccept": "I understand the risk",
+    "TgMaxRiskDecline": "Close"
   },
   "values-ru": {
     "TgMaxLanguageTitle": "На каком языке продолжить?",
@@ -59,7 +63,11 @@
     "YourPasswordHeader": "Пароль",
     "EnterPassword": "Пароль",
     "LoginPasswordTextShort": "Введите пароль от аккаунта MAX.",
-    "SearchCountry": "Поиск"
+    "SearchCountry": "Поиск",
+    "TgMaxUnofficialTitle": "Неофициальный клиент",
+    "TgMaxUnofficialWarning": "MaxGram — неофициальный клиент. MAX может ограничивать или блокировать аккаунты за использование сторонних клиентов. Используйте на свой риск. Разработчик не может гарантировать отсутствие блокировки.",
+    "TgMaxRiskAccept": "Я понимаю риск",
+    "TgMaxRiskDecline": "Закрыть"
   },
   "values-es": {
     "TgMaxLanguageTitle": "¿En qué idioma quieres continuar?",

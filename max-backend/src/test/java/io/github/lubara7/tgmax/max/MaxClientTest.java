@@ -37,6 +37,31 @@ public class MaxClientTest {
         return client;
     }
 
+    @Test public void noSocketBeforePermission() throws Exception {
+        CompletableFuture<Void> permission = new CompletableFuture<>();
+        server.enqueue(new MockResponse().withWebSocketUpgrade(new WebSocketListener() {
+            @Override public void onMessage(WebSocket ws, ByteString bytes) { respond(ws, codec.decode(bytes.toByteArray()), Maps.of()); }
+        }));
+        server.start();
+        client = new MaxClient(new OkHttpClient(), new MaxDevice("test", "en", "Android", "800x360 3.0x", "UTC", "test-browser"),
+                server.url("/websocket").toString(), 2000, () -> permission);
+        CompletableFuture<Void> connection = client.connect();
+        assertFalse(connection.isDone()); assertEquals(0, server.getRequestCount());
+        permission.complete(null); connection.get(3, TimeUnit.SECONDS);
+        assertEquals(1, server.getRequestCount());
+    }
+
+    @Test public void declinedPermissionFailsEvenBeforeUserAgentReady() throws Exception {
+        CompletableFuture<Void> permission = new CompletableFuture<>(); server.start();
+        client = new MaxClient(new OkHttpClient(), new MaxDevice("test", "en", "Android", "800x360 3.0x", "UTC", null),
+                server.url("/websocket").toString(), 2000, () -> permission);
+        CompletableFuture<Void> connection = client.connect();
+        permission.completeExceptionally(new MaxException("MAX_CONSENT_DECLINED"));
+        try { connection.get(1, TimeUnit.SECONDS); fail("Declined permission kept waiting"); }
+        catch (ExecutionException expected) { assertEquals("MAX_CONSENT_DECLINED", ((MaxException) root(expected)).code); }
+        assertEquals(0, server.getRequestCount());
+    }
+
     @Test public void handshakeAndHttpHeaderUseTheSameProfileSnapshot() throws Exception {
         AtomicReference<String> initAgent = new AtomicReference<>();
         WebSocketListener listener = new WebSocketListener() {

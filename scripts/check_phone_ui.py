@@ -57,11 +57,15 @@ def assert_login_layout(nodes, strings, qualifier):
 
 
 try:
+    labels = json.loads(Path('integrations/telegram/auth-strings.json').read_text())['values']
+    nodes = wait_for('disclaimer.xml', lambda rows: any(n.get('text') == labels['TgMaxUnofficialWarning'] for n in rows))
+    Path('disclaimer.png').write_bytes(adb('exec-out', 'screencap', '-p'))
+    tap(next(n.attrib for n in nodes if n.get('text') == labels['TgMaxRiskAccept']))
     nodes = wait_for('login.xml', lambda rows: any(n.get('content-desc') == 'Phone number' for n in rows))
     assert any(n.get('text') == 'Check the country code and enter the phone number from your MAX account.' for n in nodes)
     Path('login.png').write_bytes(adb('exec-out', 'screencap', '-p'))
     assert any(n.get('content-desc') == 'Help' for n in nodes)
-    assert any(n.get('content-desc') == 'Log in by QR code' for n in nodes)
+    assert not any(n.get('content-desc') == 'Log in by QR code' for n in nodes)
     assert any('privacy policy' in n.get('text', '') and 'user agreement' in n.get('text', '') for n in nodes)
     default_strings = {n.get('name'): n.text for n in ET.parse(Path('core/localization/src/main/res/values/strings.xml')).findall('string')}
     assert_login_layout(nodes, default_strings, 'values')
@@ -75,8 +79,8 @@ try:
     tap(nodes[positions[0]].attrib)
     nodes = wait_for('login-country.xml', lambda rows: any(n.get('content-desc') == 'Country code' and n.get('text') == '7' for n in rows))
     assert any('Russia' in n.get('text', '') for n in nodes)
-    languages = ['Русский', 'English', 'Español', 'Português (Brasil)', 'O‘zbek', 'Français', 'Беларуская']
-    qualifiers = ['values-ru', 'values', 'values-es', 'values-pt-rBR', 'values-uz', 'values-fr', 'values-be']
+    languages = ['Русский', 'English']
+    qualifiers = ['values-ru', 'values']
     language_label = 'Language'
     for index, (native, qualifier) in enumerate(zip(languages, qualifiers)):
         nodes = snapshot('before-language.xml')
@@ -95,7 +99,7 @@ try:
         Path(f'login-{qualifier}.png').write_bytes(adb('exec-out', 'screencap', '-p'))
         Path(f'login-{qualifier}.xml').write_bytes(Path('localized-login.xml').read_bytes())
         language_label = strings['language_title']
-    print('Published MAXGRAM APK: phone copy, ordered countries, help, legal footer and seven language switches checked')
+    print('Prototype MAXGRAM APK: phone copy, ordered countries, help, legal footer and RU/EN language switches checked')
 except Exception:
     for name, args in [('startup-logcat.txt', ('logcat', '-d')), ('activity-state.txt', ('shell', 'dumpsys', 'activity', 'activities'))]:
         try:

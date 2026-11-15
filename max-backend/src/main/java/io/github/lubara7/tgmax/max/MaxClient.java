@@ -11,6 +11,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -24,6 +25,7 @@ public final class MaxClient implements Closeable {
     private final MaxDevice device;
     private final String endpoint;
     private final long timeoutMillis;
+    private final Supplier<CompletableFuture<Void>> connectionPermission;
     private final MaxFrameCodec codec = new MaxFrameCodec();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "tgmax-protocol"); t.setDaemon(true); return t;
@@ -42,20 +44,32 @@ public final class MaxClient implements Closeable {
     private volatile Map<String, Object> handshake = Maps.of();
     private final CompletableFuture<Void> closedSignal = new CompletableFuture<>();
 
-    public MaxClient(OkHttpClient http, MaxDevice device) { this(http, device, ENDPOINT, 30_000); }
+    public MaxClient(OkHttpClient http, MaxDevice device) { this(http, device, ENDPOINT, 30_000, () -> CompletableFuture.completedFuture(null)); }
 
+    public MaxClient(OkHttpClient http, MaxDevice device, Supplier<CompletableFuture<Void>> permission) {
+        this(http, device, ENDPOINT, 30_000, permission);
+    }
     MaxClient(OkHttpClient http, MaxDevice device, String endpoint, long timeoutMillis) {
+        this(http, device, endpoint, timeoutMillis, () -> CompletableFuture.completedFuture(null));
+    }
+    MaxClient(OkHttpClient http, MaxDevice device, String endpoint, long timeoutMillis, Supplier<CompletableFuture<Void>> permission) {
+
         this.http = http;
         this.device = device;
         this.endpoint = endpoint;
         this.timeoutMillis = timeoutMillis;
+        connectionPermission = permission;
         scheduler.scheduleWithFixedDelay(() -> {
             if (ready) rawRequest(MaxOpcode.PING, Maps.of("interactive", interactive));
         }, 30, 30, TimeUnit.SECONDS);
     }
 
     public CompletableFuture<Void> connect() {
-        return CompletableFuture.anyOf(device.ready(), closedSignal).thenCompose(unused -> connectPrepared());
+        try {
+            return CompletableFuture.anyOf(connectionPermission.get(), closedSignal)
+                    .thenCompose(unused -> CompletableFuture.anyOf(device.ready(), closedSignal))
+                    .thenCompose(unused -> connectPrepared());
+        } catch (RuntimeException failure) { return failed(failure); }
     }
 
     private CompletableFuture<Void> connectPrepared() {

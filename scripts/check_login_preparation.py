@@ -60,9 +60,9 @@ assert 'implementation("com.github.luben:zstd-jni:' not in backend_build
 assert '-keep class com.github.luben.zstd.** { *; }' in (client / 'TMessagesProj/proguard-rules.pro').read_text()
 print('Official Android Zstandard AAR, desktop JAR exclusion and JNI keep rules checked')
 
-assert 'TgMaxQrActivity' in login
+assert 'TgMaxQrActivity' not in login
 assert 'VIEW_QR_LOGIN' not in login
-assert 'maxQrButton' in login
+assert 'maxQrButton' not in login
 assert 'defaultConfig.applicationId = APP_PACKAGE' in app_build
 assert 'APP_PACKAGE=io.github.lubara7.tgmax' in (client / 'gradle.properties').read_text()
 assert 'jvmTarget = JavaVersion.VERSION_17.toString()' in app_build
@@ -78,3 +78,5 @@ for qualifier in ['values', 'values-ru']:
     strings = {s.get('name'): s.text for s in ET.parse(resources / qualifier / 'strings.xml').findall('string')}
     assert all(strings.get(key) for key in ['TgMaxQrTitle', 'TgMaxGhost', 'TgMaxUnread', 'TgMaxNoTyping', 'TgMaxUnknownUser'])
 print('Pinned Nagram base, MAX QR, local privacy settings and financial menu removal checked')
+
+assert 'TgMaxDisclaimer.showIfNeeded(this)' in (client / "TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java").read_text()

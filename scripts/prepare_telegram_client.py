@@ -361,6 +361,7 @@ def isolate_client_services(target):
     add_after_opening(loader, r"private (?:static )?void initPushServices\(\)", f"        if ({runtime}.enabled()) return;\n")
     add_after_opening(loader, r"public static void startPushService\(\)", f"        if ({runtime}.enabled()) return;\n")
     launch = java / "org/telegram/ui/LaunchActivity.java"
+    add_after_opening(launch, r"protected void onResume\(\)", f"        AndroidUtilities.runOnUIThread(() -> {JAVA_PREFIX}TgMaxDisclaimer.showIfNeeded(this), 1);\n")
     add_after_opening(launch, r"private BaseFragment getClientNotActivatedFragment\(\)", f"        if ({runtime}.enabled()) return new LoginActivity();\n")
     add_after_opening(java / "org/telegram/messenger/BillingController.java", r"public void startConnection\(\)",
                       f"        if ({runtime}.enabled()) return;\n")

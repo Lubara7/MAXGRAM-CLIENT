@@ -122,8 +122,15 @@ def main():
 public class MessagesController {
  public static MessagesController getInstance(int account) {return null;}
  public void processUpdates(org.telegram.tgnet.TLRPC.Updates updates,boolean fromQueue) {}
+ public void loadDialogs(int folderId,int offset,int count,boolean fromCache) {}
 }
 """)
+    if not re.search(r"public void loadDialogs\(final int folderId, int offset, int count, boolean fromCache\)", controller):
+        raise SystemExit("MessagesController loadDialogs callback changed")
+    user_config = (java / "org/telegram/messenger/UserConfig.java").read_text()
+    if "public static UserConfig getInstance(int num)" not in user_config or "public boolean isClientActivated()" not in user_config:
+        raise SystemExit("UserConfig API changed")
+    write(stubs / "org/telegram/messenger/UserConfig.java", "package org.telegram.messenger; public class UserConfig { public static UserConfig getInstance(int account) {return null;} public boolean isClientActivated() {return false;} }\n")
     write(stubs / "org/telegram/messenger/ApplicationLoader.java",
           "package org.telegram.messenger; public class ApplicationLoader { public static android.content.Context applicationContext; }\n")
     write(stubs / "org/telegram/messenger/Utilities.java", """package org.telegram.messenger;

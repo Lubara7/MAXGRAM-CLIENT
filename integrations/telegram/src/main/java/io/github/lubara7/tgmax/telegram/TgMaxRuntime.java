@@ -95,7 +95,7 @@ public final class TgMaxRuntime {
                 legacy ? "Android " + Build.VERSION.RELEASE : "Android", screen, TimeZone.getDefault().getID(), local.webUserAgent(),
                 legacy ? MaxSessionProfile.legacyWeb(version) : MaxSessionProfile.web(version, null),
                 legacy ? TgMaxLocales.networkCode(LocaleController.getLocaleStringIso639()) : deviceLanguage());
-        client = new MaxClient(new OkHttpClient.Builder().connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS).build(), device);
+        client = new MaxClient(new OkHttpClient.Builder().connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS).build(), device, () -> TgMaxConsent.permission(context));
         client.setPrivacy(privacy);
         api = new MaxApi(client);
         client.addPushListener(frame -> executor.execute(() -> {
@@ -106,13 +106,13 @@ public final class TgMaxRuntime {
             ConnectionsManager.onConnectionStateChanged(connected ? 3 : 1, account);
             if (!connected) { login = null; allDialogs = null; }
         });
-        if (!device.ready().isDone()) new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+        if (!device.ready().isDone()) TgMaxConsent.permission(context).thenRun(() -> new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
             try {
                 String agent = android.webkit.WebSettings.getDefaultUserAgent(context);
                 local.webUserAgent(agent);
                 device.setUserAgent(agent);
             } catch (RuntimeException failure) { device.userAgentUnavailable(); }
-        });
+        }));
     }
 
     private static String recommendedWebVersion(Context context) {
@@ -135,6 +135,14 @@ public final class TgMaxRuntime {
         android.os.LocaleList locales = android.content.res.Resources.getSystem().getConfiguration().getLocales();
         String language = locales.isEmpty() ? "en" : locales.get(0).getLanguage();
         return language.isEmpty() ? "en" : language;
+    }
+
+    public static void resumeAfterConsent() {
+        for (TgMaxRuntime runtime : INSTANCES.values()) {
+            if (!org.telegram.messenger.UserConfig.getInstance(runtime.account).isClientActivated()) continue;
+            runtime.login = null; runtime.allDialogs = null;
+            MessagesController.getInstance(runtime.account).loadDialogs(0, 0, 100, false);
+        }
     }
 
     public MaxPrivacyPolicy privacy() { return privacy; }
@@ -358,7 +366,7 @@ public final class TgMaxRuntime {
     }
 
     private synchronized CompletableFuture<Void> ensureLogin() {
-        if (login != null) return login;
+        if (login != null && !login.isCompletedExceptionally()) return login;
         login = CompletableFuture.supplyAsync(local::session, executor).thenCompose(saved -> {
             if (saved == null) throw new MaxException("AUTH_KEY_UNREGISTERED");
             return performLogin(saved[1]);
