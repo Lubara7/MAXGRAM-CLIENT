@@ -4,16 +4,12 @@ import java.util.Locale;
 import org.telegram.messenger.LocaleController;
 
 public final class TgMaxLocales {
-    private static final String[][] LANGUAGES = {
-            {"ru", "Русский", "Russian"}, {"en", "English", "English"},
-            {"es", "Español", "Spanish"}, {"pt_br", "Português (Brasil)", "Portuguese (Brazil)"},
-            {"uz", "O‘zbek", "Uzbek"}, {"fr", "Français", "French"}, {"be", "Беларуская", "Belarusian"}
-    };
+    private static final String[][] LANGUAGES = {{"ru", "Русский", "Russian"}, {"en", "English", "English"}};
 
     private TgMaxLocales() { }
 
     public static String code(String tag) {
-        Locale locale = Locale.forLanguageTag(tag.replace('_', '-'));
+        Locale locale = Locale.forLanguageTag((tag == null ? "en" : tag).replace('_', '-'));
         if (locale.getLanguage().equals("pt")) return "pt_br";
         for (String[] language : LANGUAGES) if (language[0].equals(locale.getLanguage())) return language[0];
         return "en";

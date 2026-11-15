@@ -41,7 +41,8 @@ def main():
     if 'tgnet/NativeByteBuffer.cpp' not in graph or re.search(
             r'tgnet/(?:Connections?Manager|Connection(?:Socket|Session)?|Handshake|MTProtoScheme|Datacenter|TLSHello)\.cpp', graph):
         raise SystemExit('Unexpected native transport sources in the compiled APK build')
-    metadata = client / 'TMessagesProj_AppStandalone/build/outputs/apk/afat/debug/output-metadata.json'
+    base_key = json.loads((ROOT / 'upstream.lock.json').read_text()).get('uiBase', 'telegram')
+    metadata = client / ('TMessagesProj/build/outputs/apk/debug/output-metadata.json' if base_key == 'nagram' else 'TMessagesProj_AppStandalone/build/outputs/apk/afat/debug/output-metadata.json')
     data = json.loads(metadata.read_text())
     if data['applicationId'] != 'io.github.lubara7.tgmax':
         raise SystemExit('Refusing to release an unexpected applicationId')

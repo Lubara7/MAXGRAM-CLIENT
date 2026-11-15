@@ -55,12 +55,14 @@ def write(path, text):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", type=Path, default=ROOT / "upstream/telegram")
+    source_lock = json.loads((ROOT / "upstream.lock.json").read_text())
+    base_key = source_lock.get("uiBase", "telegram")
+    parser.add_argument("--source", type=Path, default=ROOT / "upstream" / base_key)
     parser.add_argument("--android-jar", type=Path)
     parser.add_argument("--output", type=Path, default=ROOT / "build/telegram-api-check")
     args = parser.parse_args()
     source = args.source.resolve()
-    lock = json.loads((ROOT / "upstream.lock.json").read_text())["sources"]["telegram"]
+    lock = source_lock["sources"][base_key]
     actual = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source, text=True).strip()
     if actual != lock["commit"]: raise SystemExit("Telegram pin mismatch")
     java = source / "TMessagesProj/src/main/java"

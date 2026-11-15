@@ -109,7 +109,7 @@ def restrict_languages(target):
                       f"        if ({JAVA_PREFIX}TgMaxRuntime.enabled()) {{ {helper}.install(this); return; }}\n")
     add_after_opening(controller, r"private void loadOtherLanguages\(\)",
                       f"        if ({JAVA_PREFIX}TgMaxRuntime.enabled()) return;\n")
-    allowed = {"ru", "en", "es", "uz", "pt", "fr", "be"}
+    allowed = {"ru", "en"}
     removed = []
     for directory in (base / "res").glob("values-*"):
         match = re.match(r"values-([a-z]{2,3})(?:-|$)", directory.name)
@@ -117,8 +117,12 @@ def restrict_languages(target):
             shutil.rmtree(directory)
             removed.append(directory.name)
     sessions = base / "java/org/telegram/ui/SessionsActivity.java"
-    change(sessions, "if (currentType == 0 && getMessagesController().qrLoginCamera)",
-           f"if (!{JAVA_PREFIX}TgMaxRuntime.enabled() && currentType == 0 && getMessagesController().qrLoginCamera)")
+    if "if (currentType == 0 && getMessagesController().qrLoginCamera)" in sessions.read_text():
+        change(sessions, "if (currentType == 0 && getMessagesController().qrLoginCamera)",
+               f"if (!{JAVA_PREFIX}TgMaxRuntime.enabled() && currentType == 0 && getMessagesController().qrLoginCamera)")
+    else:
+        change(sessions, "qrCodeRow = rowCount++;", "qrCodeRow = -1;")
+        change(sessions, "qrCodeDividerRow = rowCount++;", "qrCodeDividerRow = -1;")
     change(sessions, "return position == terminateAllSessionsRow || position >= otherSessionsStartRow",
            f"if ({JAVA_PREFIX}TgMaxRuntime.enabled() && currentType == 0) return position == terminateAllSessionsRow;\n            return position == terminateAllSessionsRow || position >= otherSessionsStartRow")
     login = base / "java/org/telegram/ui/LoginActivity.java"
@@ -143,9 +147,7 @@ def install_auth_translations(resources):
         "error_invalid_code": ["InvalidCode"], "error_expired_code": ["CodeExpired"],
         "error_unknown": ["ErrorOccurred"], "action_sign_out": ["LogOut"],
     }
-    names = {"values": "English", "values-ru": "Русский", "values-es": "Español",
-             "values-uz": "O‘zbek", "values-pt": "Português (Portugal)",
-             "values-pt-rBR": "Português (Brasil)", "values-fr": "Français", "values-be": "Беларуская"}
+    names = {"values": "English", "values-ru": "Русский"}
     navigation = json.loads((ROOT / "integrations/telegram/navigation-strings.json").read_text())
     auth = json.loads((ROOT / "integrations/telegram/auth-strings.json").read_text())
     local = json.loads((ROOT / "integrations/telegram/local-strings.json").read_text())
@@ -157,7 +159,7 @@ def install_auth_translations(resources):
         translations.update(navigation[qualifier])
         translations.update(auth.get(qualifier, auth["values-pt-rBR"] if qualifier == "values-pt" else {}))
         translations.update(local[qualifier])
-        translations.update(AppName="MAXGRAM CLIENT", AppNameBeta="MAXGRAM CLIENT", LanguageName=native_name)
+        translations.update(AppName="MAXGRAM", AppNameBeta="MAXGRAM", LanguageName=native_name)
         destination = resources / qualifier / "strings.xml"
         destination.parent.mkdir(parents=True, exist_ok=True)
         text = destination.read_text() if destination.exists() else '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
@@ -175,6 +177,75 @@ def install_auth_translations(resources):
 
 
 def configure_build(target):
+    lock = json.loads((ROOT / "upstream.lock.json").read_text())
+    if lock.get("uiBase") != "nagram":
+        configure_official_build(target)
+        return
+    release = json.loads((ROOT / "release.json").read_text())
+    app = target / "TMessagesProj/build.gradle"
+    text = app.read_text().replace('apply plugin: "com.google.gms.google-services"', '').replace('apply plugin: "com.google.firebase.crashlytics"', '')
+    text = text.replace("JavaVersion.VERSION_11", "JavaVersion.VERSION_17")
+    text = text.replace("minSdkVersion 23", "minSdkVersion 27").replace("android-23", "android-27")
+    text = text.replace("version '3.22.1'", "version '3.31.6'")
+    text = text.replace('path "jni/CMakeLists.txt"', 'path "jni/CMakeLists.txt"\n            version "3.31.6"')
+    text = text.replace('defaultConfig.applicationId = "xyz.nextalone.nagram"', 'defaultConfig.applicationId = APP_PACKAGE')
+    text = re.sub(r"def verCode = \d+", "def verCode = " + str(release["versionCode"]), text, count=1)
+    start = text.index('        //obtain your own keys')
+    end = text.index('        buildConfigField "String", "BUILD_VERSION_STRING"', start)
+    text = text[:start] + text[end:]
+    text = text.replace("dependencies {", "dependencies {\n    implementation project(':tgmax-backend')\n    implementation 'com.github.luben:zstd-jni:1.5.7-7@aar'", 1)
+    text = text.replace('localeFilters += ["zz"]', 'localeFilters += ["en", "ru", "zz"]')
+    text += '''
+android {
+    defaultConfig.ndk.abiFilters.add('arm64-v8a')
+    signingConfigs {
+        tgmaxAlpha {
+            storeFile = file(System.getenv("TGMAX_ALPHA_KEYSTORE") ?: (System.getProperty("user.home") + "/.android/debug.keystore"))
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+    buildTypes.debug.signingConfig = signingConfigs.tgmaxAlpha
+    applicationVariants.configureEach { variant ->
+        variant.outputs.configureEach { output -> output.versionCodeOverride = defaultConfig.versionCode }
+    }
+}
+'''
+    app.write_text(text)
+    settings = target / "settings.gradle"
+    settings.write_text(settings.read_text() + "\ninclude ':tgmax-backend'\n")
+    shutil.copytree(ROOT / "max-backend", target / "tgmax-backend", ignore=shutil.ignore_patterns("build", ".gradle"))
+    change(target / "tgmax-backend/build.gradle.kts", '    implementation("com.github.luben:zstd-jni:1.5.7-7")',
+           '    compileOnly("com.github.luben:zstd-jni:1.5.7-7")\n    testImplementation("com.github.luben:zstd-jni:1.5.7-7")')
+    rules = target / "TMessagesProj/proguard-rules.pro"
+    rules.write_text(rules.read_text() + '\n-keep class com.github.luben.zstd.** { *; }\n')
+    properties = target / "gradle.properties"
+    text = properties.read_text()
+    for key, value in {'APP_PACKAGE': 'io.github.lubara7.tgmax', 'APP_VERSION_NAME': release['version'], 'APP_VERSION_CODE': str(release['versionCode'])}.items():
+        text = re.sub(r"(?m)^" + key + r"=.*$", key + '=' + value, text)
+    properties.write_text(text)
+    variables = target / "TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java"
+    text = variables.read_text().replace('USE_CLOUD_STRINGS = true', 'USE_CLOUD_STRINGS = false').replace('CHECK_UPDATES = true', 'CHECK_UPDATES = false')
+    text = re.sub(r'SUPPORTS_PASSKEYS = [^;]+;', 'SUPPORTS_PASSKEYS = false;', text)
+    text = re.sub(r'APP_ID = \d+;', 'APP_ID = 0;', text)
+    text = re.sub(r'APP_HASH = "[^"]*";', 'APP_HASH = "";', text)
+    text = text.replace('LOGS_ENABLED = DEBUG_VERSION || sharedPreferences.getBoolean("logsEnabled", DEBUG_VERSION);', 'LOGS_ENABLED = false;')
+    variables.write_text(text)
+    analytics = target / "TMessagesProj/src/main/java/tw/nekomimi/nekogram/helpers/AnalyticsHelper.java"
+    analytics.write_text(re.sub(r'(public static void \w+\([^)]*\)\s*\{)',
+            lambda m: m[0] + '\n        if (' + JAVA_PREFIX + 'TgMaxRuntime.enabled()) return;', analytics.read_text()))
+    storage = target / "TMessagesProj/src/main/java/org/telegram/messenger/MessagesStorage.java"
+    change(storage, "LAST_DB_VERSION = 179;", "LAST_DB_VERSION = 181;")
+    change(storage, '        database.executeFast("PRAGMA user_version = " + MessagesStorage.LAST_DB_VERSION)',
+           '        ' + JAVA_PREFIX + 'TgMaxCacheMigration.ensureCurrent(database);\n        database.executeFast("PRAGMA user_version = " + MessagesStorage.LAST_DB_VERSION)')
+    change(target / "TMessagesProj/src/main/java/org/telegram/messenger/DatabaseMigrationHelper.java",
+           "        return version;", "        return " + JAVA_PREFIX + "TgMaxCacheMigration.migrate(database, version);")
+    manifest = target / "TMessagesProj/src/main/AndroidManifest.xml"
+    manifest.write_text(re.sub(r'android:allowBackup="[^"]*"', 'android:allowBackup="false"', manifest.read_text()))
+
+
+def configure_official_build(target):
     release = json.loads((ROOT / "release.json").read_text())
     library = target / "TMessagesProj/build.gradle"
     app = target / "TMessagesProj_AppStandalone/build.gradle"
@@ -287,7 +358,7 @@ def isolate_client_services(target):
     java = target / "TMessagesProj/src/main/java"
     runtime = JAVA_PREFIX + "TgMaxRuntime"
     loader = java / "org/telegram/messenger/ApplicationLoader.java"
-    add_after_opening(loader, r"private void initPushServices\(\)", f"        if ({runtime}.enabled()) return;\n")
+    add_after_opening(loader, r"private (?:static )?void initPushServices\(\)", f"        if ({runtime}.enabled()) return;\n")
     add_after_opening(loader, r"public static void startPushService\(\)", f"        if ({runtime}.enabled()) return;\n")
     launch = java / "org/telegram/ui/LaunchActivity.java"
     add_after_opening(launch, r"private BaseFragment getClientNotActivatedFragment\(\)", f"        if ({runtime}.enabled()) return new LoginActivity();\n")
@@ -554,11 +625,13 @@ def install_max_assets(target):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", type=Path, default=ROOT / "upstream/telegram")
+    source_lock = json.loads((ROOT / "upstream.lock.json").read_text())
+    base_key = source_lock.get("uiBase", "telegram")
+    parser.add_argument("--source", type=Path, default=ROOT / "upstream" / base_key)
     parser.add_argument("--output", type=Path, default=ROOT / "build/telegram-client")
     args = parser.parse_args()
     source, output = args.source.resolve(), args.output.resolve()
-    lock = json.loads((ROOT / "upstream.lock.json").read_text())["sources"]["telegram"]
+    lock = source_lock["sources"][base_key]
     if not (source / ".git").exists():
         raise SystemExit("Initialize upstream/telegram first: git submodule update --init --depth 1 upstream/telegram")
     if run("git", "rev-parse", "HEAD", cwd=source) != lock["commit"]:
@@ -591,9 +664,10 @@ def main():
             if (!maxUrl.isEmpty()) return ImageLocation.getForPath(maxUrl);
         }}
 """)
+    shutil.copy2(ROOT / "integrations/max-session-profiles.json", output / "TMessagesProj/src/main/assets/tgmax-session-profiles.json")
     install_max_assets(output)
     verify_guards(output, native_names)
-    report = {"telegram_commit": lock["commit"], "network_entrypoints_guarded": len(native_names),
+    report = {"ui_base": base_key, "ui_commit": lock["commit"], "network_entrypoints_guarded": len(native_names),
               "removed_locale_directories": removed, "native_apk_verified": False}
     (output / "TGMAX_CHANGES.json").write_text(json.dumps(report, indent=2) + "\n")
     (output / "TGMAX_CHANGES.md").write_text("MAXGRAM CLIENT modifies this Telegram checkout to use the Komet-derived MAX backend.\nSee the parent project's SOURCE_PROVENANCE.md and docs/telegram-migration.md.\nUpstream copyright and GPL notices are retained.\n")

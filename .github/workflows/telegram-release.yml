@@ -53,7 +53,7 @@ jobs:
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.2.12479018' 'cmake;3.31.6'
       - name: Prepare pinned Telegram source
         run: |
-          git submodule update --init --depth 1 upstream/telegram upstream/komet
+          git submodule update --init --depth 1 upstream/nagram upstream/komet
           python3 scripts/prepare_telegram_client.py
           python3 scripts/init_telegram_dependencies.py
       - name: Test MAX backend and compile Telegram Java
@@ -61,7 +61,7 @@ jobs:
         run: ./gradlew --no-daemon --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g' :tgmax-backend:test :TMessagesProj:compileDebugJavaWithJavac
       - name: Build real Telegram ARM64 APK
         working-directory: build/telegram-client
-        run: ./gradlew --no-daemon --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g' :TMessagesProj_AppStandalone:assembleAfatDebug
+        run: ./gradlew --no-daemon --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g' :TMessagesProj:assembleDebug
       - name: Prepare and verify release artifacts
         run: |
           mkdir -p dist

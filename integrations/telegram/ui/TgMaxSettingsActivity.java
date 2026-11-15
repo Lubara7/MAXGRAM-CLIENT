@@ -7,7 +7,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import io.github.lubara7.tgmax.max.MaxPrivacyPolicy;
 import org.telegram.messenger.AndroidUtilities;
-import org.telegram.messenger.LiteMode;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.ActionBar;
@@ -50,9 +49,6 @@ public final class TgMaxSettingsActivity extends BaseFragment {
             refresh();
         });
         info(context, list, R.string.TgMaxGhostInfo);
-        animation(context, list, R.string.TgMaxAnimatedStickers, LiteMode.FLAGS_ANIMATED_STICKERS);
-        animation(context, list, R.string.TgMaxAnimatedEmoji, LiteMode.FLAGS_ANIMATED_EMOJI);
-        info(context, list, R.string.TgMaxAnimationInfo);
         refresh();
         return fragmentView;
     }
@@ -72,15 +68,6 @@ public final class TgMaxSettingsActivity extends BaseFragment {
         list.addView(cell, LayoutHelper.createLinear(-1, 56));
         cell.setOnClickListener(v -> action.run());
         return cell;
-    }
-
-    private static void animation(Context context, LinearLayout list, int label, int flag) {
-        TextCheckCell cell = row(context, list, label, () -> {});
-        cell.setChecked(LiteMode.isEnabledSetting(flag));
-        cell.setOnClickListener(v -> {
-            LiteMode.toggleFlag(flag, !LiteMode.isEnabledSetting(flag));
-            cell.setChecked(LiteMode.isEnabledSetting(flag));
-        });
     }
 
     private static void info(Context context, LinearLayout list, int label) {

@@ -9,3 +9,6 @@
 [submodule "upstream/telegram"]
 	path = upstream/telegram
 	url = https://github.com/DrKLO/Telegram.git
+[submodule "upstream/nagram"]
+	path = upstream/nagram
+	url = https://github.com/NextAlone/Nagram.git

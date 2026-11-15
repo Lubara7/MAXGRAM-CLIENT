@@ -46,7 +46,7 @@ jobs:
         run: python3 -m unittest discover -s scripts -p 'test_release_validation.py'
       - name: Check pinned Telegram integration
         run: |
-          git submodule update --init --depth 1 upstream/telegram
+          git submodule update --init --depth 1 upstream/nagram
           python3 scripts/check_telegram_api.py
           python3 scripts/prepare_telegram_client.py
           python3 scripts/check_login_preparation.py

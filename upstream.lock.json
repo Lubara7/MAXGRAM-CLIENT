@@ -18,7 +18,14 @@
       "url": "https://github.com/DrKLO/Telegram.git",
       "commit": "21f7d109da6ab3506c9e9577f98c6a38771ab335",
       "license": "GPL-2.0-or-later",
-      "role": "Android UI base"
+      "role": "Reference for compatibility with previously installed MaxGram caches; not compiled"
+    },
+    "nagram": {
+      "url": "https://github.com/NextAlone/Nagram.git",
+      "commit": "8f2a8a03aa7aec599150b09d302bfd5023283344",
+      "license": "GPL-3.0-or-later",
+      "role": "Active Android UI base"
     }
-  }
+  },
+  "uiBase": "nagram"
 }

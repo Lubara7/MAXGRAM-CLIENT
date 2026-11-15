@@ -1,8 +1,9 @@
 # Source provenance
 
-MAXGRAM CLIENT uses official DrKLO/Telegram as its Android UI source and ports selected MAX client protocol operations from Komet. NagramXF is consulted only for selected privacy behavior and is not compiled. Exact revisions are recorded in `upstream.lock.json` and git submodules.
+MAXGRAM CLIENT uses NextAlone/Nagram as its active Android UI source and ports selected MAX client protocol operations from Komet. NagramXF is consulted only for selected privacy behavior and is not compiled. Exact revisions are recorded in `upstream.lock.json` and git submodules.
 
-- Telegram Android: https://github.com/DrKLO/Telegram, revision `21f7d109da6ab3506c9e9577f98c6a38771ab335`, version 13.2.2 (7303). Upstream GPL-2.0-or-later file notices are retained.
+- NextAlone/Nagram (active UI): https://github.com/NextAlone/Nagram, revision `8f2a8a03aa7aec599150b09d302bfd5023283344`, version 13.1.1 (7237), GPL-3.0-or-later.
+- Telegram Android (compatibility reference): https://github.com/DrKLO/Telegram, revision `21f7d109da6ab3506c9e9577f98c6a38771ab335`, version 13.2.2 (7303). Upstream GPL-2.0-or-later file notices are retained.
 - NagramXF (reference only): https://github.com/Keeperorowner/NagramXF, revision `49ae647f6b5555f80beae945af1ae6f6d0bbf877`.
 - Komet: https://github.com/KometTeam/Komet, revision `7ce5814e625f61b553b92e13e09ee59d5a01057e` (`dev/0.5.0`).
 - NagramXF retains Telegram and other contributors' copyright notices. Its root LICENSE and Komet's root LICENSE are GNU GPL version 3 texts. Existing per-file notices remain authoritative for the corresponding files.
@@ -35,3 +36,5 @@ Official Telegram migration (2026-11-14):
 - Official MAX web bundles `0.r1iFaaS8.js` and `RmCTWSHK.js` at https://web.max.ru/ were inspected for QR creation/status/authentication (288/289/291), server TTL, `status.loginAvailable`, TEXT typing (65) and interactive presence pings (1). Their JavaScript is reference material and is not bundled.
 - Komet `lib/backend/modules/contacts.dart` confirms contact names, photoId, baseUrl/baseRawUrl and direct HTTPS avatar loading. Personal screenshots and account data are not included.
 - Komet `lib/backend/modules/chat_parsing.dart` establishes group/channel `baseIconUrl`; the native image loader is routed to that HTTPS URL.
+
+Nagram migration (2026-11-15): Nagram cache schema 179 is extended to 181 for compatibility with previously installed MaxGram builds. Existing message and user TL constructor IDs were compared. Widget cache data is preserved in a backup table during conversion; message tables are not dropped.

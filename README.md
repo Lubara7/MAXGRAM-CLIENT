@@ -6,19 +6,19 @@ Specification v2 is in progress: see [implementation and acceptance status](docs
 
 **The MAX messenger. The Telegram experience.**
 
-Unofficial Android client built on [official Telegram Android](https://github.com/DrKLO/Telegram), with a native MAX backend based on [Komet](https://github.com/KometTeam/Komet).
+Unofficial Android client built on [NextAlone/Nagram](https://github.com/NextAlone/Nagram), with a native MAX backend based on [Komet](https://github.com/KometTeam/Komet).
 
 [Download APK](https://github.com/Lubara7/MAXGRAM-CLIENT/releases) · [Source code](https://github.com/Lubara7/MAXGRAM-CLIENT) · [Build guide](docs/telegram-migration.md)
 
 </div>
 
-NagramXF is a reference for selected privacy behavior only; its application and extra menus are not compiled.
+The UI base is pinned to NextAlone/Nagram under GPL v3. NagramXF remains a reference for selected privacy behavior.
 
 ## Android client
 
 Telegram-style navigation, chat list and message bubbles, connected to MAX. MAX QR sign-in uses a server-issued link and device confirmation. Phone-number sign-in supports CAPTCHA, a verification code, an account password and server-selected outgoing-call verification. The login screen includes language selection, help and MAX legal documents.
 
-**Languages:** Русский · English · Español · Português (Brasil) · O‘zbek · Français · Беларуская.
+**Languages (specification v2):** Русский · English.
 
 **Android 8.1+ · ARM64 · Experimental alpha.** Live-account compatibility is still being tested. Media uploads, stories, messenger voice/video calls and background MAX push are not implemented. Login translations are bundled; the wider Telegram interface still has English fallback strings. See [release notes](docs/release-notes.md).
 
@@ -29,11 +29,11 @@ Requires JDK 21, Android SDK 36, Build Tools 36.0.0, NDK 27.2.12479018 and CMake
 ```bash
 git clone https://github.com/Lubara7/MAXGRAM-CLIENT.git
 cd MAXGRAM-CLIENT
-git submodule update --init --depth 1 upstream/telegram
+git submodule update --init --depth 1 upstream/nagram
 python3 scripts/prepare_telegram_client.py
 python3 scripts/init_telegram_dependencies.py
 cd build/telegram-client
-NATIVE_TARGET=arm64-v8a ./gradlew :tgmax-backend:test :TMessagesProj_AppStandalone:assembleAfatDebug
+NATIVE_TARGET=arm64-v8a ./gradlew :tgmax-backend:test :TMessagesProj:assembleDebug
 ```
 
 The prepared checkout uses real Telegram UI components and a Java MAX protocol adapter. MTProto transport is excluded from the native build. The Android application ID stays `io.github.lubara7.tgmax`, so updates preserve the installed application. CI reuses the alpha signing key.
@@ -46,7 +46,7 @@ The prepared checkout uses real Telegram UI components and a Java MAX protocol a
 - [Source provenance](SOURCE_PROVENANCE.md)
 - [Release notes and limitations](docs/release-notes.md)
 
-Backend tests cover binary frames, compression, CAPTCHA ordering, cancellation, OTP, call verification, sessions and stable message identifiers. CI also builds the APK, checks its signature and opens the published build in an Android emulator.
+Backend tests cover binary frames, compression, CAPTCHA ordering, cancellation, OTP, call verification, sessions and stable message identifiers. CI also builds the APK, checks its signature and opens the matching prototype artifact in an Android emulator.
 
 ## License
 

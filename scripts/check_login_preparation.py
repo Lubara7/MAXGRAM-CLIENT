@@ -31,11 +31,11 @@ assert text['Country'] == 'Страна'
 assert 'R.drawable.maxgram_help' in login
 assert 'https://legal.max.ru/recsysrules' in login
 assert 'TgMaxCallActivity' in login
-for qualifier in ['values', 'values-ru', 'values-es', 'values-pt-rBR', 'values-uz', 'values-fr', 'values-be']:
+for qualifier in ['values', 'values-ru']:
     strings = {s.get('name'): s.text for s in ET.parse(resources / qualifier / 'strings.xml').findall('string')}
     assert all(strings.get(key) for key in ['YourNumber', 'Country', 'TgMaxLanguageTitle', 'TgMaxCallTitle', 'TgMaxPrivacy', 'TgMaxTerms', 'TgMaxRecommendations'])
-    assert strings['AppName'] == 'MAXGRAM CLIENT'
-print('MAXGRAM name, seven login translations, help, legal footer and call screen preparation checked')
+    assert strings['AppName'] == 'MAXGRAM'
+print('MAXGRAM name, RU/EN login translations, help, legal footer and call screen preparation checked')
 
 phone = login[login.index('public class PhoneView'):login.index('public class LoginActivitySmsView')]
 assert 'syncContacts = false;' in phone
@@ -51,7 +51,7 @@ for style in resources.rglob('styles.xml'):
 print('Login footer space, removed Telegram debug/contact controls and MAX splash artwork checked')
 
 app_build = (client / 'TMessagesProj/build.gradle').read_text()
-assert "path 'jni/CMakeLists.txt'\n            version '3.31.6'" in app_build
+assert 'path "jni/CMakeLists.txt"\n            version "3.31.6"' in app_build
 backend_build = (client / 'tgmax-backend/build.gradle.kts').read_text()
 assert "implementation 'com.github.luben:zstd-jni:1.5.7-7@aar'" in app_build
 assert 'compileOnly("com.github.luben:zstd-jni:1.5.7-7")' in backend_build
@@ -63,17 +63,18 @@ print('Official Android Zstandard AAR, desktop JAR exclusion and JNI keep rules 
 assert 'TgMaxQrActivity' in login
 assert 'VIEW_QR_LOGIN' not in login
 assert 'maxQrButton' in login
-standalone = (client / 'TMessagesProj_AppStandalone/build.gradle').read_text()
-assert 'applicationIdSuffix ".web"' not in standalone
-assert 'output.versionCodeOverride = defaultConfig.versionCode' in standalone
-assert '@mipmap/maxgram_launcher' in (client / 'TMessagesProj/config/release/AndroidManifest_standalone.xml').read_text()
+assert 'defaultConfig.applicationId = APP_PACKAGE' in app_build
+assert 'APP_PACKAGE=io.github.lubara7.tgmax' in (client / 'gradle.properties').read_text()
+assert 'jvmTarget = JavaVersion.VERSION_17.toString()' in app_build
+assert 'LAST_DB_VERSION = 181' in (client / 'TMessagesProj/src/main/java/org/telegram/messenger/MessagesStorage.java').read_text()
+assert 'TgMaxCacheMigration.migrate(database, version)' in (client / 'TMessagesProj/src/main/java/org/telegram/messenger/DatabaseMigrationHelper.java').read_text()
 settings = (client / 'TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java').read_text()
 fill = settings[settings.index('final boolean walletAbove'):settings.index('items.add(UItem.asHeader(getString(R.string.SettingsHelp)))')]
 assert all(label not in fill for label in ['R.string.TelegramPremium', 'R.string.TelegramStars', 'R.string.GramEarnings', 'R.string.SendAGift'])
 assert 'https://business.max.ru/' in settings
 assert 'TgMaxSettingsActivity' in settings
-assert not (client / 'TMessagesProj/src/main/java/tw/nekomimi').exists()
-for qualifier in ['values', 'values-ru', 'values-es', 'values-pt-rBR', 'values-uz', 'values-fr', 'values-be']:
+assert (client / 'TMessagesProj/src/main/java/tw/nekomimi').exists()
+for qualifier in ['values', 'values-ru']:
     strings = {s.get('name'): s.text for s in ET.parse(resources / qualifier / 'strings.xml').findall('string')}
     assert all(strings.get(key) for key in ['TgMaxQrTitle', 'TgMaxGhost', 'TgMaxUnread', 'TgMaxNoTyping', 'TgMaxUnknownUser'])
-print('Official Telegram base, MAX QR, local privacy settings and financial menu removal checked')
+print('Pinned Nagram base, MAX QR, local privacy settings and financial menu removal checked')
