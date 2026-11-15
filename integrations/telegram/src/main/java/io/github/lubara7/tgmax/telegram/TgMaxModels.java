@@ -21,8 +21,12 @@ final class TgMaxModels {
     final java.util.Set<Long> blocked=new java.util.HashSet<>();
     long self;
     private final MaxMessageArchive archive;
+    private final MaxPhonebookNames phonebook;
+    private final java.util.Set<String> removedContacts;
 
-    TgMaxModels(StableIds ids, MaxMessageArchive archive) { this.ids = ids; this.archive = archive; }
+    TgMaxModels(StableIds ids, MaxMessageArchive archive,MaxPhonebookNames phonebook,java.util.Set<String> removedContacts) {
+        this.ids=ids;this.archive=archive;this.phonebook=phonebook;this.removedContacts=removedContacts;
+    }
 
     synchronized void snapshot(Map<String, Object> data) {
         Map<String, Object> profile = Maps.object(Maps.object(data.get("profile")).get("contact"));
@@ -77,6 +81,8 @@ final class TgMaxModels {
         if (user.first_name.isEmpty() && user.last_name.isEmpty())
             user.first_name = LocaleController.getString(R.string.TgMaxUnknownUser);
         user.bot = contact.get("options") instanceof List && ((List<?>)contact.get("options")).contains("BOT");
+        String localName=phonebook.find(profile.phone);
+        if(!user.bot&&!removedContacts.contains(Long.toString(rawId))&&localName!=null){user.first_name=localName;user.last_name="";}
         user.flags = 2;
         if(user.bot)user.flags|=16384;
         if(blocked.contains(rawId)){user.status=new TLRPC.TL_userStatusLastMonth();user.flags|=64;}

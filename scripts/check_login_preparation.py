@@ -1,5 +1,6 @@
 import argparse
 import json
+import subprocess
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
@@ -7,6 +8,10 @@ ROOT = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--client', type=Path, default=ROOT / 'build/telegram-client')
 client = parser.parse_args().client
+java_root = client / 'TMessagesProj/src/main/java'
+syntax_files = [java_root / 'org/telegram/ui' / (name + '.java') for name in ['LoginActivity', 'CountrySelectActivity', 'SettingsActivity', 'UserInfoActivity', 'SessionsActivity', 'ProfileActivity']]
+syntax_files += list((java_root / 'io/github/lubara7/tgmax/telegram').glob('*.java'))
+subprocess.run(['java', str(ROOT / 'scripts/CheckPreparedJava.java'), *map(str, syntax_files)], check=True)
 expected = json.loads((ROOT / 'integrations/telegram/login-countries.json').read_text())
 actual = [line.split(';') for line in (client / 'TMessagesProj/src/main/assets/countries.txt').read_text().splitlines()]
 assert len(expected) == len(actual) == 44
@@ -88,3 +93,8 @@ assert 'TgMaxPrivacyActivity(currentAccount)' in settings
 assert 'TgMaxSessionActivity' in (client / 'TMessagesProj/src/main/java/io/github/lubara7/tgmax/telegram/TgMaxPrivacyActivity.java').read_text()
 assert 'TgMaxTokenActivity' in login
 print('MAX account fields, privacy/session screens and explicit own-token login prepared')
+
+manifest=(client / 'TMessagesProj/src/main/AndroidManifest.xml').read_text()
+assert 'android.permission.READ_CONTACTS' in manifest
+assert 'android.permission.WRITE_CONTACTS' not in manifest
+assert 'MaxPhonebookNames' in (java_root / 'io/github/lubara7/tgmax/telegram/TgMaxRuntime.java').read_text()

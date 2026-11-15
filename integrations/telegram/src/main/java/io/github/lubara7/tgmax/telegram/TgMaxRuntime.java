@@ -29,6 +29,9 @@ public final class TgMaxRuntime {
     private final StableIds ids;
     private final TgMaxModels models;
     private final MaxMessageArchive archive;
+    private final MaxPhonebookNames phonebook;
+    private final java.util.Set<String> removedContacts;
+    private final android.content.SharedPreferences localPreferences;
     private volatile MaxClient client;
     private volatile MaxApi api;
     private final android.content.SharedPreferences privacyPreferences;
@@ -86,7 +89,9 @@ public final class TgMaxRuntime {
         local = new MaxLocalState(context, account);
         ids = new StableIds(local);
         archive = new MaxMessageArchive(context, account);
-        models = new TgMaxModels(ids, archive);
+        phonebook=new MaxPhonebookNames(context);localPreferences=context.getSharedPreferences("max_local_"+account,0);
+        removedContacts=new java.util.HashSet<>(localPreferences.getStringSet("removed_contacts",Collections.emptySet()));
+        models = new TgMaxModels(ids, archive, phonebook, removedContacts);
         executor = Executors.newSingleThreadExecutor(r -> { Thread t = new Thread(r, "tgmax-account-" + account); t.setDaemon(true); return t; });
         android.util.DisplayMetrics display = context.getResources().getDisplayMetrics();
         String version = local.profileVersion(recommendedWebVersion(context));
@@ -195,6 +200,9 @@ public final class TgMaxRuntime {
     private static CompletableFuture<TLObject> failedAuth(String code) {
         CompletableFuture<TLObject> failed=new CompletableFuture<>();failed.completeExceptionally(new MaxException(code));return failed;
     }
+
+    public long rawUserId(long localId){return ids.maxUser(localId);}
+    public long rawChatId(long localId){return ids.maxChat(localId);}
 
     public String sessionVersion(){return client.device().profile.appVersion;}
 
@@ -451,8 +459,19 @@ public final class TgMaxRuntime {
         }
         if (request instanceof TLRPC.TL_contacts_getContacts) {
             TLRPC.TL_contacts_contacts response = new TLRPC.TL_contacts_contacts();
-            response.users.addAll(models.users());
+            phonebook.refresh(Maps.string(models.contacts.getOrDefault(models.self,Maps.of()).get("country")));
+            for(TLRPC.User user:models.users()){
+                if(user.self||removedContacts.contains(Long.toString(ids.maxUser(user.id))))continue;
+                TLRPC.TL_contact contact=new TLRPC.TL_contact();contact.user_id=user.id;
+                user.contact=true;user.flags|=2048;response.contacts.add(contact);response.users.add(user);
+            }
             return done(finish(response));
+        }
+        if(request instanceof TLRPC.TL_contacts_deleteContacts){
+            TLRPC.TL_contacts_deleteContacts r=(TLRPC.TL_contacts_deleteContacts)request;
+            for(TLRPC.InputUser user:r.id)removedContacts.add(Long.toString(ids.maxUser(user.user_id)));
+            if(!localPreferences.edit().putStringSet("removed_contacts",new java.util.HashSet<>(removedContacts)).commit())throw new MaxException("MAX_STORAGE");
+            return done(new TLRPC.TL_updates());
         }
         if (request instanceof TLRPC.TL_users_getUsers) {
             TLRPC.TL_users_getUsers r = (TLRPC.TL_users_getUsers) request;

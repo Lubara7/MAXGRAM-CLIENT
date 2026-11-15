@@ -61,3 +61,6 @@ Account controls use the native Nagram first-name, last-name and biography field
 
 
 WEB wire-format correction: pinned PyMax `protocol/ws/protocol.py` uses text JSON v11, whereas the previous Komet-derived codec sends binary v10. New WEB and imported browser profiles now use JSON v11. Legacy saved profiles retain binary v10 until explicit relogin. The JSON decoder preserves 64-bit IDs exactly, bounds nesting, checks reply/opcode correlation and rejects unexpected wire formats. WEB login omits binary-only fingerprint/experiment fields. Mock WebSocket tests cover INIT → CAPTCHA → auth, token login, large IDs and consent. No live session has been used to claim compatibility.
+
+
+Contacts checkpoint: the Telegram-compatible contact response now contains contact rows as well as user objects. After Android READ_CONTACTS permission, names are matched locally by normalized international phone numbers; the phonebook is not uploaded. Local contact removal hides a contact in the client's own store and avoids deleting Android phonebook records. Profile metadata converts local adapter IDs back to actual MAX IDs. The supplied APK's cg4 contact options confirm the BOT flag. Live contact/presence acceptance remains pending.

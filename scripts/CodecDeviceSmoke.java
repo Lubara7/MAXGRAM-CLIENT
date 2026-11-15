@@ -66,6 +66,12 @@ public class CodecDeviceSmoke {
         getUser.setAccessible(true);
         Object user = getUser.invoke(models, 12345L);
         if (!"Sample contact".equals(user.getClass().getField("first_name").get(user))) throw new AssertionError("MAX display name mismatch");
+        long localUser=((Number)user.getClass().getField("id").get(user)).longValue();
+        if(((Number)runtime.getMethod("rawUserId",long.class).invoke(second,localUser)).longValue()!=12345L)throw new AssertionError("Displayed profile ID is not the MAX ID");
+        java.lang.reflect.Method authenticated=runtime.getDeclaredMethod("authenticated",Class.forName("org.telegram.tgnet.TLObject",true,loader));authenticated.setAccessible(true);
+        Object contactsRequest=Class.forName("org.telegram.tgnet.TLRPC$TL_contacts_getContacts",true,loader).getConstructor().newInstance();
+        Object contactsResult=((java.util.concurrent.CompletableFuture<?>)authenticated.invoke(second,contactsRequest)).get();
+        if(((java.util.List<?>)contactsResult.getClass().getField("contacts").get(contactsResult)).isEmpty())throw new AssertionError("Contacts response has users but no contact rows");
         Class<?> image = Class.forName("org.telegram.messenger.ImageLocation", true, loader);
         int small = image.getField("TYPE_SMALL").getInt(null);
         Object userImage = image.getMethod("getForUser", int.class, Class.forName("org.telegram.tgnet.TLRPC$User", true, loader), int.class)

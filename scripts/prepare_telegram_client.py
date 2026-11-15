@@ -245,7 +245,9 @@ android {
     change(target / "TMessagesProj/src/main/java/org/telegram/messenger/DatabaseMigrationHelper.java",
            "        return version;", "        return " + JAVA_PREFIX + "TgMaxCacheMigration.migrate(database, version);")
     manifest = target / "TMessagesProj/src/main/AndroidManifest.xml"
-    manifest.write_text(re.sub(r'android:allowBackup="[^"]*"', 'android:allowBackup="false"', manifest.read_text()))
+    manifest_text=re.sub(r'android:allowBackup="[^"]*"', 'android:allowBackup="false"', manifest.read_text())
+    manifest_text=re.sub(r'<uses-permission\s+android:name="android.permission.WRITE_CONTACTS"\s*/>', '',manifest_text)
+    manifest.write_text(manifest_text)
 
 
 def configure_official_build(target):
@@ -385,7 +387,7 @@ def restrict_max_ui(target):
     anchor = "            TelephonyManager tm = "
     src = phone.read_text()
     start = src.index("public void onNextPressed(String code)", src.index("public class PhoneView"))
-    pos = src.index(anchor, start)
+    pos = src.rfind("\n", 0, src.index(anchor, start)) + 1
     src = src[:pos] + f"""            if ({runtime}.enabled() && activityMode == MODE_LOGIN) {{
                 String digits = PhoneFormat.stripExceptNumbers(codeField.getText().toString())
                         + PhoneFormat.stripExceptNumbers(phoneField.getText().toString());
@@ -461,6 +463,19 @@ def restrict_max_ui(target):
         }}
 """)
     add_after_opening(user_info, r"protected void onClick\(UItem item, View view, int position, float x, float y\)", f"        if (item.id == 1102) {{ {JAVA_PREFIX}TgMaxAccountControls.showInactivity(this, currentAccount); return; }}\n")
+
+    contacts_ui=ui / "ContactsActivity.java"
+    change(contacts_ui, "ContactsController.getInstance(currentAccount).forceImportContacts();", "ContactsController.getInstance(currentAccount).loadContacts(false, 0);")
+    contacts_controller=java / "messenger/ContactsController.java"
+    add_after_opening(contacts_controller, r"private void deleteContactFromPhoneBook\(long uid\)", f"        if ({runtime}.enabled()) return;\n")
+    profile=ui / "ProfileActivity.java"
+    text=profile.read_text().replace('idTextView.setText("ID: " + userId + ", DC: " + dc);', f'idTextView.setText("ID: " + {runtime}.get(currentAccount).rawUserId(userId));')
+    text=text.replace('idTextView.setText("ID: " + userId);', f'idTextView.setText("ID: " + {runtime}.get(currentAccount).rawUserId(userId));')
+    text=text.replace('idTextView.setText("ID: " + chatId + ", DC: " + dc);', f'idTextView.setText("ID: " + {runtime}.get(currentAccount).rawChatId(chatId));')
+    text=text.replace('idTextView.setText("ID: " + chatId);', f'idTextView.setText("ID: " + {runtime}.get(currentAccount).rawChatId(chatId));')
+    text=text.replace('NekoConfig.showIdAndDc.Bool()', f'({runtime}.enabled() || NekoConfig.showIdAndDc.Bool())')
+    text=text.replace('            id = userId;', f'            id = {runtime}.get(currentAccount).rawUserId(userId);').replace('            id = chatId;', f'            id = {runtime}.get(currentAccount).rawChatId(chatId);')
+    profile.write_text(text)
 
 
 def configure_phone_login(target):
