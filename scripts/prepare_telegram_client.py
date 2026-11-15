@@ -40,7 +40,7 @@ def guard_mtproto(target):
     callback = re.search(r"\bRequestDelegate\s+(\w+)", signature[1]) if signature else None
     if callback is None:
         raise RuntimeError("ConnectionsManager request callback signature changed")
-    declarations = list(re.finditer(r"public static native (\w+) (native_\w+)\(([^;]*)\);", original))
+    declarations = list(re.finditer(r"public static native ([\w.\[\]]+) (native_\w+)\(([^;]*)\);", original))
     if len(declarations) < 35:
         raise RuntimeError("ConnectionsManager native API changed")
     local_only = {"native_setJava", "native_isGoodPrime", "native_test_AuthAuthorization"}
@@ -72,7 +72,7 @@ def guard_mtproto(target):
         result, name, parameters = declaration[1], declaration[2], declaration[3]
         if name not in names:
             continue
-        body = {"void": "return;", "int": "return 0;", "long": "return 0L;", "boolean": "return false;"}[result]
+        body = {"void": "return;", "int": "return 0;", "long": "return 0L;", "boolean": "return false;", "byte[]": "return null;"}[result]
         if name == "native_sendRequest": body = 'throw new IllegalStateException("MTProto is disabled in TG-MAX");'
         if name == "native_getCurrentTime": body = "return (int) (System.currentTimeMillis() / 1000);"
         if name == "native_getCurrentTimeMillis": body = "return System.currentTimeMillis();"
@@ -611,8 +611,11 @@ extern "C" int registerNativeBuffers(JavaVM *vm, JNIEnv *env) {
 """)
     change(jni / "jni.c", "registerNativeTgNetFunctions", "registerNativeBuffers", 2)
     manager = target / "TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java"
-    change(manager, "public static native void native_setJava(boolean useJavaByteBuffers);",
-           "public static void native_setJava(boolean useJavaByteBuffers) {}")
+    text=manager.read_text()
+    text, count=re.subn(r"public static native void native_setJava\(([^)]*)\);",
+            lambda match: "public static void native_setJava(" + match[1] + ") {}", text)
+    if count not in (1,2): raise RuntimeError("Native Java initialization signatures changed")
+    manager.write_text(text)
     change(manager, "public static native boolean native_isGoodPrime(byte[] prime, int g);",
            "public static boolean native_isGoodPrime(byte[] prime, int g) { return false; }")
     manager.write_text(re.sub(r"(?m)^\s*public static native [^;\n]+;", "", manager.read_text()))

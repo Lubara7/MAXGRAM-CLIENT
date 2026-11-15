@@ -10,6 +10,7 @@ parser.add_argument('--client', type=Path, default=ROOT / 'build/telegram-client
 client = parser.parse_args().client
 java_root = client / 'TMessagesProj/src/main/java'
 syntax_files = [java_root / 'org/telegram/ui' / (name + '.java') for name in ['LoginActivity', 'CountrySelectActivity', 'SettingsActivity', 'UserInfoActivity', 'SessionsActivity', 'ProfileActivity']]
+syntax_files.append(java_root / 'org/telegram/tgnet/ConnectionsManager.java')
 syntax_files += list((java_root / 'io/github/lubara7/tgmax/telegram').glob('*.java'))
 subprocess.run(['java', str(ROOT / 'scripts/CheckPreparedJava.java'), *map(str, syntax_files)], check=True)
 expected = json.loads((ROOT / 'integrations/telegram/login-countries.json').read_text())
@@ -98,3 +99,8 @@ manifest=(client / 'TMessagesProj/src/main/AndroidManifest.xml').read_text()
 assert 'android.permission.READ_CONTACTS' in manifest
 assert 'android.permission.WRITE_CONTACTS' not in manifest
 assert 'MaxPhonebookNames' in (java_root / 'io/github/lubara7/tgmax/telegram/TgMaxRuntime.java').read_text()
+
+connection=(java_root / 'org/telegram/tgnet/ConnectionsManager.java').read_text()
+assert 'public static native' not in connection
+assert 'public static byte[] tgmax_native_exportAuthKey' in connection
+assert 'public static void native_setJava(int instanceNum) {}' in connection
