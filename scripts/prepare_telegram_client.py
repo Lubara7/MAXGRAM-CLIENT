@@ -199,6 +199,7 @@ def configure_build(target):
     text = text.replace('localeFilters += ["zz"]', 'localeFilters += ["en", "ru", "zz"]')
     text += '''
 android {
+    splits.abi { enable false; reset(); universalApk true }
     defaultConfig.ndk.abiFilters.add('arm64-v8a')
     signingConfigs {
         tgmaxAlpha {

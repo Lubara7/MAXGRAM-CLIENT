@@ -66,6 +66,7 @@ assert 'maxQrButton' not in login
 assert 'defaultConfig.applicationId = APP_PACKAGE' in app_build
 assert 'APP_PACKAGE=io.github.lubara7.tgmax' in (client / 'gradle.properties').read_text()
 assert 'jvmTarget = JavaVersion.VERSION_17.toString()' in app_build
+assert 'splits.abi { enable false; reset(); universalApk true }' in app_build
 assert 'LAST_DB_VERSION = 181' in (client / 'TMessagesProj/src/main/java/org/telegram/messenger/MessagesStorage.java').read_text()
 assert 'TgMaxCacheMigration.migrate(database, version)' in (client / 'TMessagesProj/src/main/java/org/telegram/messenger/DatabaseMigrationHelper.java').read_text()
 settings = (client / 'TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java').read_text()
