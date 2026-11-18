@@ -87,6 +87,12 @@ for qualifier in ['values', 'values-ru']:
 print('Pinned Nagram base, no login QR, local privacy settings and financial menu removal checked')
 
 assert 'TgMaxDisclaimer.showIfNeeded(this)' in (client / "TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java").read_text()
+native_init = (client / 'TMessagesProj/jni/jni.c').read_text()
+assert 'verifySign(' not in native_init
+assert 'registerNativeBuffers(vm, env)' in native_init
+assert (java_root / 'org/telegram/messenger/ApplicationLoader.java').read_text().count('TgMaxNative.verify();') == 2
+assert (java_root / 'io/github/lubara7/tgmax/telegram/TgMaxNative.java').is_file()
+print('Fork signing identity and storage JNI startup verification prepared')
 
 account = (client / 'TMessagesProj/src/main/java/org/telegram/ui/UserInfoActivity.java').read_text()
 assert 'TgMaxAccountControls.showInactivity(this, currentAccount)' in account

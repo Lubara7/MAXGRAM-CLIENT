@@ -8,6 +8,17 @@ public class CodecDeviceSmoke {
     }
 
     public static void verify(ClassLoader loader) throws Exception {
+        Class.forName("io.github.lubara7.tgmax.telegram.TgMaxNative", true, loader)
+                .getMethod("verify").invoke(null);
+        Class<?> webCodecClass = Class.forName("io.github.lubara7.tgmax.max.MaxJsonFrameCodec", true, loader);
+        Object webCodec = webCodecClass.getConstructor().newInstance();
+        Object webFrame = webCodecClass.getMethod("decode", String.class).invoke(webCodec,
+                "{\"ver\":11,\"cmd\":1,\"seq\":7,\"opcode\":49,\"payload\":{\"id\":9007199254740997,\"text\":\"Привет 😀\"}}");
+        Map<?, ?> webPayload = (Map<?, ?>) webFrame.getClass().getField("payload").get(webFrame);
+        if (!Long.valueOf(9007199254740997L).equals(webPayload.get("id")) || !"Привет 😀".equals(webPayload.get("text")))
+            throw new AssertionError("Packaged WEB JSON codec lost an ID or Unicode text");
+        String json = (String) webCodecClass.getMethod("encode", webFrame.getClass()).invoke(webCodec, webFrame);
+        if (!json.contains("9007199254740997")) throw new AssertionError("Packaged WEB JSON encoder rounded an ID");
         Class<?> codecClass = Class.forName("io.github.lubara7.tgmax.max.MaxFrameCodec", true, loader);
         Object codec = codecClass.getConstructor().newInstance();
         String[] fixtures = {

@@ -1,8 +1,8 @@
 {
-  "version": "0.3.0-dev.1",
-  "tag": "v0.3.0-dev.1",
+  "version": "0.3.0-dev.2",
+  "tag": "v0.3.0-dev.2",
   "prerelease": true,
   "abi": "arm64-v8a",
   "minSdk": 27,
-  "versionCode": 13
+  "versionCode": 14
 }

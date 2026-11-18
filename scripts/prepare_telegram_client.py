@@ -363,6 +363,8 @@ def isolate_client_services(target):
     java = target / "TMessagesProj/src/main/java"
     runtime = JAVA_PREFIX + "TgMaxRuntime"
     loader = java / "org/telegram/messenger/ApplicationLoader.java"
+    change(loader, "        NativeLoader.initNativeLibs(ApplicationLoader.applicationContext);",
+           f"        NativeLoader.initNativeLibs(ApplicationLoader.applicationContext);\n        {JAVA_PREFIX}TgMaxNative.verify();", 2)
     add_after_opening(loader, r"private (?:static )?void initPushServices\(\)", f"        if ({runtime}.enabled()) return;\n")
     add_after_opening(loader, r"public static void startPushService\(\)", f"        if ({runtime}.enabled()) return;\n")
     launch = java / "org/telegram/ui/LaunchActivity.java"
@@ -610,6 +612,14 @@ extern "C" int registerNativeBuffers(JavaVM *vm, JNIEnv *env) {
 }
 """)
     change(jni / "jni.c", "registerNativeTgNetFunctions", "registerNativeBuffers", 2)
+    # Nagram's JNI loader pins its publisher's certificate. A source-built fork is
+    # signed by its own key; that upstream pin aborts JNI_OnLoad before buffers
+    # and SQLite can be registered. Android still verifies the APK signature and
+    # CI checks the project's saved signing certificate before installation.
+    native_init = jni / "jni.c"
+    if '#include "integrity.h"' in native_init.read_text():
+        change(native_init, '#include "integrity.h"\n', '')
+        change(native_init, "    if (verifySign(env) != JNI_OK) {\n        return JNI_ERR;\n    }\n", '')
     manager = target / "TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java"
     text=manager.read_text()
     text, count=re.subn(r"public static native void native_setJava\(([^)]*)\);",

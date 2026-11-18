@@ -37,7 +37,7 @@ Citation placeholders such as `[citation:13]` in the supplied text are not indep
 
 ## Current known defect
 
-The alpha.11 Android test detected insufficient Russian legal-footer spacing after a language switch. That build is a prototype; its successful compilation is not a completed UI acceptance test. The next artifact must resolve and retest this defect.
+The alpha.11 Android test detected insufficient Russian legal-footer spacing after a language switch. That build is a prototype; its successful compilation is not a completed UI acceptance test. The next artifact must resolve and retest this defect. The Nagram dev.1 artifact compiled successfully, but its installed test failed before login: the upstream publisher certificate pin aborted JNI_OnLoad and left NativeByteBuffer methods unregistered. The fork preparation now removes this upstream publisher pin; Android APK signing and the saved MaxGram signing-key checks remain. A synchronous native-buffer round trip runs before storage queues, and Android instrumentation verifies it again. These fixes still need an installed-artifact pass.
 
 ## Session-core implementation checkpoint
 
