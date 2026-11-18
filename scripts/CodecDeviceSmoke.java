@@ -40,6 +40,7 @@ public class CodecDeviceSmoke {
     }
 
     public static void verifyLocalFeatures(ClassLoader loader, android.content.Context context) throws Exception {
+        verifySessionProfileUpgrade(loader, context);
         verifyArchive(loader, context);
         verifyCacheMigration(loader, context);
         Class.forName("io.github.lubara7.tgmax.telegram.TgMaxQrActivity", true, loader);
@@ -77,6 +78,18 @@ public class CodecDeviceSmoke {
         getUser.setAccessible(true);
         Object user = getUser.invoke(models, 12345L);
         if (!"Sample contact".equals(user.getClass().getField("first_name").get(user))) throw new AssertionError("MAX display name mismatch");
+        java.lang.reflect.Method presence = models.getClass().getDeclaredMethod("presence",long.class,Map.class); presence.setAccessible(true);
+        java.util.Map<String,Object> status = new java.util.HashMap<>(); status.put("seen",1795000000L); status.put("status",2);
+        presence.invoke(models,12345L,status);
+        Object recent = getUser.invoke(models,12345L);
+        if (!recent.getClass().getField("status").get(recent).getClass().getSimpleName().equals("TL_userStatusRecently")) throw new AssertionError("MAX privacy status was replaced with an exact timestamp");
+        java.lang.reflect.Field blockedField = models.getClass().getDeclaredField("blocked"); blockedField.setAccessible(true);
+        @SuppressWarnings("unchecked") java.util.Set<Long> blocked = (java.util.Set<Long>) blockedField.get(models);
+        blocked.add(12345L);
+        try {
+            Object hidden = getUser.invoke(models,12345L);
+            if (!hidden.getClass().getField("status").get(hidden).getClass().getSimpleName().equals("TL_userStatusEmpty")) throw new AssertionError("Blocked profile exposed a recent status");
+        } finally { blocked.remove(12345L); }
         long localUser=((Number)user.getClass().getField("id").get(user)).longValue();
         if(((Number)runtime.getMethod("rawUserId",long.class).invoke(second,localUser)).longValue()!=12345L)throw new AssertionError("Displayed profile ID is not the MAX ID");
         java.lang.reflect.Method authenticated=runtime.getDeclaredMethod("authenticated",Class.forName("org.telegram.tgnet.TLObject",true,loader));authenticated.setAccessible(true);
@@ -95,6 +108,31 @@ public class CodecDeviceSmoke {
                 .invoke(null, 1, chat, small);
         if (!group.get("baseIconUrl").equals(image.getField("path").get(groupImage))) throw new AssertionError("MAX group avatar URL mismatch");
         System.out.println("Prototype APK loaded MAX QR/local settings and isolated privacy between accounts");
+    }
+
+    private static void verifySessionProfileUpgrade(ClassLoader loader, android.content.Context context) throws Exception {
+        int account = 10011;
+        Class<?> type = Class.forName("io.github.lubara7.tgmax.telegram.MaxLocalState",true,loader);
+        java.lang.reflect.Constructor<?> constructor = type.getDeclaredConstructor(android.content.Context.class,int.class); constructor.setAccessible(true);
+        Object state = constructor.newInstance(context,account);
+        java.lang.reflect.Method profile = type.getDeclaredMethod("profileVersion",String.class), session = type.getDeclaredMethod("session",long.class,String.class), clear = type.getDeclaredMethod("clear");
+        for (java.lang.reflect.Method m : new java.lang.reflect.Method[]{profile,session,clear}) m.setAccessible(true);
+        android.content.SharedPreferences prefs = context.getSharedPreferences("max_device_"+account,0);
+        try {
+            clear.invoke(state); prefs.edit().clear().putString("app_version","26.11.6").commit();
+            if (!"26.11.8".equals(profile.invoke(state,"26.11.8"))) throw new AssertionError("Unbound default profile did not update");
+            prefs.edit().putString("app_version","26.11.6").putBoolean("profile_pinned",true).commit();
+            if (!"26.11.6".equals(profile.invoke(state,"26.11.8"))) throw new AssertionError("Explicit profile choice changed");
+            prefs.edit().putBoolean("profile_pinned",false).commit();
+            session.invoke(state,12345L,"synthetic-owned-token");
+            if (!"26.11.6".equals(profile.invoke(state,"26.11.8"))) throw new AssertionError("Token-bound profile changed");
+            prefs.edit().remove("app_version").remove("legacy_profile").commit();
+            if (!"26.8.8".equals(profile.invoke(state,"26.11.8")) || !prefs.getBoolean("legacy_profile",false)) throw new AssertionError("Old session lost its legacy profile");
+        } finally {
+            clear.invoke(state); prefs.edit().clear().commit();
+            java.security.KeyStore keys=java.security.KeyStore.getInstance("AndroidKeyStore");keys.load(null);
+            keys.deleteEntry(context.getPackageName()+".max-session."+account);
+        }
     }
     private static void verifyArchive(ClassLoader loader, android.content.Context context) throws Exception {
         Class<?> type = Class.forName("io.github.lubara7.tgmax.telegram.MaxMessageArchive", true, loader);

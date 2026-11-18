@@ -9,6 +9,7 @@ public final class MaxOpcode {
     public static final int LOGOUT = 20;
     public static final int REGISTER = 23;
     public static final int CONTACT_INFO = 32;
+    public static final int CONTACT_PRESENCE = 35;
     public static final int CHAT_INFO = 48;
     public static final int HISTORY = 49;
     public static final int READ = 50;
@@ -24,6 +25,7 @@ public final class MaxOpcode {
     public static final int SESSIONS_CLOSE = 97;
     public static final int CHECK_PASSWORD = 115;
     public static final int MESSAGE = 128;
+    public static final int PRESENCE = 132;
     public static final int CHAT_UPDATE = 135;
     public static final int AUTH_CAPTCHA = 224;
     public static final int AUTH_GET_QR = 288;

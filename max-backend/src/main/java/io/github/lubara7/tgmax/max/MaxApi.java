@@ -143,6 +143,10 @@ public final class MaxApi {
     public CompletableFuture<Map<String,Object>> blocked(int offset,int count) {
         return client.request(36,Maps.of("status","BLOCKED","from",offset,"count",Math.min(100,Math.max(1,count))));
     }
+    public CompletableFuture<Map<String,Object>> presence(List<Long> contacts) {
+        if (contacts.isEmpty() || contacts.size() > 100) throw new MaxException("MAX_PRESENCE_CONTACT_LIMIT");
+        return client.request(MaxOpcode.CONTACT_PRESENCE, Maps.of("contactIds", new java.util.ArrayList<>(contacts)));
+    }
     public CompletableFuture<Map<String,Object>> block(long id,boolean blocked) {
         return client.request(34,Maps.of("contactId",id,"action",blocked?"BLOCK":"UNBLOCK"));
     }

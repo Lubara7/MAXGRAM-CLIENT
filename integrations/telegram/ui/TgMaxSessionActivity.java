@@ -44,7 +44,7 @@ public final class TgMaxSessionActivity extends BaseFragment {
         apply.setOnClickListener(v->showDialog(new AlertDialog.Builder(getParentActivity()).setTitle(LocaleController.getString(R.string.TgMaxSessionProfile))
                 .setMessage(LocaleController.getString(R.string.TgMaxSessionRelogin)).setNegativeButton(LocaleController.getString(R.string.Cancel),null)
                 .setPositiveButton(LocaleController.getString(R.string.TgMaxApply),(dialog,which)->{
-                    if(!p.edit().putString("app_version",selected).putBoolean("legacy_profile",false).commit()){TgMaxAccountControls.failure(this,new IllegalStateException());return;}
+                    if(!p.edit().putString("app_version",selected).putBoolean("legacy_profile",false).putBoolean("profile_pinned",!selected.equals(recommended)).commit()){TgMaxAccountControls.failure(this,new IllegalStateException());return;}
                     MessagesController.getInstance(currentAccount).performLogout(2);
                 }).create()));
         return fragmentView=scroll;

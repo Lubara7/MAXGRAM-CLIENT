@@ -4,6 +4,7 @@ import io.github.lubara7.tgmax.max.Maps;
 import io.github.lubara7.tgmax.max.MaxException;
 import io.github.lubara7.tgmax.max.StableIds;
 import io.github.lubara7.tgmax.max.MaxContactProfile;
+import io.github.lubara7.tgmax.max.MaxPresence;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ final class TgMaxModels {
     final Map<Long, Map<String, Object>> chats = new LinkedHashMap<>();
     final Map<Long, Map<String, Object>> contacts = new LinkedHashMap<>();
     final java.util.Set<Long> blocked=new java.util.HashSet<>();
+    private final Map<Long, MaxPresence> presences = new LinkedHashMap<>();
     long self;
     private final MaxMessageArchive archive;
     private final MaxPhonebookNames phonebook;
@@ -29,6 +31,8 @@ final class TgMaxModels {
     }
 
     synchronized void snapshot(Map<String, Object> data) {
+        presenceSnapshot(data.get("presences"));
+        presenceSnapshot(data.get("presence"));
         Map<String, Object> profile = Maps.object(Maps.object(data.get("profile")).get("contact"));
         if (!profile.isEmpty()) {
             self = Maps.number(profile.get("id"));
@@ -41,6 +45,7 @@ final class TgMaxModels {
             Map<String, Object> merged = new LinkedHashMap<>(contacts.getOrDefault(id, Collections.emptyMap()));
             merged.putAll(contact);
             contacts.put(id, merged);
+            if (contact.get("presence") instanceof Map) presence(id, Maps.object(contact.get("presence")));
         }
         List<Map<String, Object>> chatRows = new ArrayList<>(Maps.objects(data.get("chats")));
         if (data.get("chat") instanceof Map) chatRows.add(Maps.object(data.get("chat")));
@@ -85,7 +90,7 @@ final class TgMaxModels {
         if(!user.bot&&!removedContacts.contains(Long.toString(rawId))&&localName!=null){user.first_name=localName;user.last_name="";}
         user.flags = 2;
         if(user.bot)user.flags|=16384;
-        if(blocked.contains(rawId)){user.status=new TLRPC.TL_userStatusLastMonth();user.flags|=64;}
+        if (!user.bot) { user.status = status(rawId); user.flags |= 64; }
         if (!user.last_name.isEmpty()) user.flags |= 4;
         user.phone = profile.phone;
         if (!user.phone.isEmpty()) user.flags |= 16;
@@ -100,6 +105,36 @@ final class TgMaxModels {
         }
         user.flags |= 32;
         return user;
+    }
+
+    private void presenceSnapshot(Object value) {
+        if (!(value instanceof Map)) return;
+        for (Map.Entry<String,Object> entry : Maps.object(value).entrySet()) {
+            if (!entry.getKey().matches("[1-9][0-9]{0,18}") || !(entry.getValue() instanceof Map)) continue;
+            try { presence(Long.parseLong(entry.getKey()), Maps.object(entry.getValue())); }
+            catch (NumberFormatException ignored) { }
+        }
+    }
+
+    synchronized void presence(long rawId, Map<String,Object> value) {
+        if (rawId > 0 && !value.isEmpty()) presences.put(rawId, new MaxPresence(value, android.os.SystemClock.elapsedRealtime()));
+    }
+
+    synchronized TLRPC.UserStatus status(long rawId) {
+        MaxPresence presence = presences.get(rawId);
+        if (presence == null || blocked.contains(rawId)) return new TLRPC.TL_userStatusEmpty();
+        long elapsed = android.os.SystemClock.elapsedRealtime();
+        switch (presence.state(elapsed, false)) {
+            case ONLINE:
+                TLRPC.TL_userStatusOnline online = new TLRPC.TL_userStatusOnline();
+                online.expires = (int) Math.min(Integer.MAX_VALUE, System.currentTimeMillis()/1000 + (presence.remainingMillis(elapsed)+999)/1000);
+                return online;
+            case RECENTLY:
+                TLRPC.TL_userStatusRecently recent = new TLRPC.TL_userStatusRecently(); recent.expires = -100; return recent;
+            case OFFLINE:
+                TLRPC.TL_userStatusOffline offline = new TLRPC.TL_userStatusOffline(); offline.expires = (int) presence.seenSeconds; return offline;
+            default: return new TLRPC.TL_userStatusEmpty();
+        }
     }
 
     synchronized List<Long> missingContacts() {

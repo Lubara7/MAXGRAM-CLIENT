@@ -11,6 +11,7 @@ client = parser.parse_args().client
 java_root = client / 'TMessagesProj/src/main/java'
 syntax_files = [java_root / 'org/telegram/ui' / (name + '.java') for name in ['LoginActivity', 'CountrySelectActivity', 'SettingsActivity', 'UserInfoActivity', 'SessionsActivity', 'ProfileActivity']]
 syntax_files.append(java_root / 'org/telegram/tgnet/ConnectionsManager.java')
+syntax_files.append(java_root / 'org/telegram/ui/ChatActivity.java')
 syntax_files += list((java_root / 'io/github/lubara7/tgmax/telegram').glob('*.java'))
 subprocess.run(['java', str(ROOT / 'scripts/CheckPreparedJava.java'), *map(str, syntax_files)], check=True)
 expected = json.loads((ROOT / 'integrations/telegram/login-countries.json').read_text())
@@ -105,6 +106,9 @@ assert 'versionView.setOnLongClickListener(v -> true)' in settings
 debug = (java_root / 'io/github/lubara7/tgmax/telegram/TgMaxDebugActivity.java').read_text()
 assert '++progress.count < 7' in debug and 'BuildConfig.DEBUG' in debug
 assert 'Intent.ACTION_CREATE_DOCUMENT' in debug
+chat = (java_root / 'org/telegram/ui/ChatActivity.java').read_text()
+header = chat[chat.index('protected boolean canSearch()'):chat.index('protected void openSearch()')]
+assert 'TgMaxRuntime.enabled()) return false' in header
 
 manifest=(client / 'TMessagesProj/src/main/AndroidManifest.xml').read_text()
 assert 'android.permission.READ_CONTACTS' in manifest
@@ -115,3 +119,6 @@ connection=(java_root / 'org/telegram/tgnet/ConnectionsManager.java').read_text(
 assert 'public static native' not in connection
 assert 'public static byte[] tgmax_native_exportAuthKey' in connection
 assert 'public static void native_setJava(int instanceNum) {}' in connection
+catalog = json.loads((client / 'TMessagesProj/src/main/assets/tgmax-session-profiles.json').read_text())
+version = catalog['profiles'][catalog['activeProfile']]['appVersion']
+assert f'CURRENT_WEB_VERSION = "{version}"' in (client / 'tgmax-backend/src/main/java/io/github/lubara7/tgmax/max/MaxSessionProfile.java').read_text()

@@ -362,12 +362,19 @@ public final class TgMaxRuntime {
             TLRPC.InputPeer peer=blocked?((TLRPC.TL_contacts_block)request).id:((TLRPC.TL_contacts_unblock)request).id;
             if(!(peer instanceof TLRPC.TL_inputPeerUser))throw new MaxException("MAX_BLOCK_REQUIRES_USER");
             long raw=ids.maxUser(peer.user_id);
-            return api.block(raw,blocked).thenApplyAsync(data->{if(blocked)models.blocked.add(raw);else models.blocked.remove(raw);return new TLRPC.TL_boolTrue();},executor);
+            return api.block(raw,blocked).thenApplyAsync(data->{
+                if(blocked)models.blocked.add(raw);else models.blocked.remove(raw);
+                deliverPresence(raw);
+                return new TLRPC.TL_boolTrue();
+            },executor);
         }
         if(request instanceof TLRPC.TL_users_getFullUser){
             TLRPC.InputUser requested=((TLRPC.TL_users_getFullUser)request).id;
             long raw=requested instanceof TLRPC.TL_inputUserSelf?models.self:ids.maxUser(requested.user_id);
             return api.contacts(Collections.singletonList(raw)).thenApplyAsync(data->{
+                api.presence(Collections.singletonList(raw)).thenAcceptAsync(presence -> {
+                    models.snapshot(presence); deliverPresence(raw);
+                }, executor).exceptionally(failure -> null);
                 models.snapshot(data);TLRPC.TL_users_userFull result=new TLRPC.TL_users_userFull();
                 TLRPC.TL_userFull full=new TLRPC.TL_userFull();full.id=ids.user(raw);full.user=models.user(raw);
                 full.about=Maps.string(models.contacts.getOrDefault(raw,Maps.of()).get("description"));
@@ -645,6 +652,7 @@ public final class TgMaxRuntime {
     }
 
     private synchronized CompletableFuture<Void> loadDialogs() {
+        if (allDialogs != null && (allDialogs.isCompletedExceptionally() || allDialogs.isCancelled())) allDialogs = null;
         if (allDialogs == null) allDialogs = page(Maps.number(loginData.get("chatMarker"), 0), 0)
                 .thenComposeAsync(unused -> {
                     models.dialogs();
@@ -768,7 +776,12 @@ public final class TgMaxRuntime {
     private void push(MaxFrame frame) {
         if (models.self == 0) return;
         Map<String, Object> data = Maps.object(frame.payload);
-        if (frame.opcode == MaxOpcode.MESSAGE || frame.opcode == 142 || frame.opcode == MaxOpcode.EDIT) {
+        if (frame.opcode == MaxOpcode.PRESENCE) {
+            long user = Maps.number(data.get("userId"), 0);
+            if (user <= 0) return;
+            models.presence(user, Maps.object(data.get("presence")));
+            deliverPresence(user);
+        } else if (frame.opcode == MaxOpcode.MESSAGE || frame.opcode == 142 || frame.opcode == MaxOpcode.EDIT) {
             MaxMessageEvent event = new MaxMessageEvent(frame.opcode, data);
             if (data.get("chat") instanceof Map) models.snapshot(Maps.of("chat", data.get("chat")));
             CompletableFuture<Map<String, Object>> ensure = models.chats.containsKey(event.chat)
@@ -788,6 +801,13 @@ public final class TgMaxRuntime {
         } else if (frame.opcode == MaxOpcode.CHAT_UPDATE) {
             models.snapshot(Maps.of("chats", Collections.singletonList(data.get("chat")))); ids.flush();
         }
+    }
+
+    private void deliverPresence(long rawId) {
+        TL_update.TL_updateUserStatus change = new TL_update.TL_updateUserStatus();
+        change.user_id = ids.user(rawId); change.status = models.status(rawId);
+        TLRPC.TL_updates updates = new TLRPC.TL_updates(); updates.date = now(); updates.updates.add(change);
+        updates.users.add(models.user(rawId)); deliver(updates);
     }
 
     private void deliver(TLRPC.TL_updates updates) {

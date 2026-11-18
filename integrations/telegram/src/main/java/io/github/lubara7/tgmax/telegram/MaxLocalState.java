@@ -65,7 +65,9 @@ final class MaxLocalState implements StableIds.Storage {
         String version = preferences.getString("app_version", null);
         File base = sessionFile.getBaseFile();
         boolean hasSession = base.exists() || new File(base.getPath() + ".bak").exists();
-        if (version == null || preferences.getBoolean("auto_profile",false) && !hasSession && !recommended.equals(version)) {
+        boolean refreshDefault = !hasSession && !recommended.equals(version)
+                && (preferences.getBoolean("auto_profile",false) || !preferences.getBoolean("profile_pinned",false));
+        if (version == null || refreshDefault) {
             boolean legacy = version == null && hasSession;
             version = legacy ? "26.8.8" : recommended;
             if (!preferences.edit().putString("app_version", version).putBoolean("legacy_profile", legacy).commit())

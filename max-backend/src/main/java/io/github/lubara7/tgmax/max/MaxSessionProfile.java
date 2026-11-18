@@ -5,7 +5,7 @@ import java.util.Map;
 
 /** Wire-specific session metadata. A profile is not evidence of ban immunity. */
 public final class MaxSessionProfile {
-    public static final String CURRENT_WEB_VERSION = "26.11.6";
+    public static final String CURRENT_WEB_VERSION = "26.11.8";
     public final String deviceType, appVersion, deviceName, architecture;
     public final int buildNumber;
     private final boolean legacyWeb;

@@ -494,6 +494,12 @@ def configure_debug_menu(target):
                       f"        if ({JAVA_PREFIX}TgMaxRuntime.enabled()) return;\n")
     add_after_opening(settings, r"public void openDebugMenu\(\)",
                       f"        if ({JAVA_PREFIX}TgMaxRuntime.enabled()) return;\n")
+    # A delayed long-press callback in the header could turn a slow profile tap
+    # into Search. Keep profile navigation on the header and the separate search
+    # action in the chat menu.
+    chat = target / "TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java"
+    add_after_opening(chat, r"protected boolean canSearch\(\)",
+                      f"                if ({JAVA_PREFIX}TgMaxRuntime.enabled()) return false;\n")
 
 
 def configure_phone_login(target):

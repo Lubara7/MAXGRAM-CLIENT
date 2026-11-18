@@ -69,3 +69,19 @@ Contacts checkpoint: the Telegram-compatible contact response now contains conta
 ## Debug diagnostics checkpoint (2026-11-18)
 
 Seven consecutive version taps open the MaxGram debug menu. The old Nagram/Telegram debug handlers are guarded out. All diagnostic preferences use `debug_` keys. Recording defaults to off and is isolated per account; the bounded journal holds the latest 512 packet metadata entries in memory. Its input type excludes payloads and HTTP headers, so tokens, phone numbers, verification codes, device IDs and message text cannot enter an export. Disabling recording or logging out clears the journal. Export uses Android's document picker and requires the user's chosen destination. These are protocol metadata, not full frame dumps. Incoming-message simulation and other experimental tools remain pending.
+
+
+## Presence and profile-navigation checkpoint (2026-11-18)
+
+The supplied `MAX.apk` SHA-256 `a658458209fb9cb3e57bf544eeb3b61a7b16685d2b595ccc9a5665f1e4f4c92f` was examined again with JADX 1.5.6. Some unrelated methods fail decompilation; the following targeted enum/parsers and formatter are readable: `dxe` defines OFFLINE=0, ONLINE=1, WAS_RECENTLY=2, WAS_LONG_AGO=3; `hve` parses `seen`/`status`; `tec` parses push `userId`/`presence`; `o65.a` converts seen seconds to milliseconds; `owe.A2` formats the four states. Opcode CONTACT_PRESENCE=35 takes contactIds and returns a presence map; NOTIF_PRESENCE=132 carries one user. `PmsProperties` has a 300-second presence cache default. Recently/long-ago are server privacy buckets, not locally guessed time thresholds.
+
+The adapter now maps login/push presence into native Telegram statuses, requests status when opening a profile, and bounds cached online to 300 seconds from receipt. Bots keep native bot labels; blocked contacts always map to the native long-ago status, including after a block operation. Unknown status codes do not disclose timestamps. Live presence refresh/subscription coverage remains an acceptance item.
+
+The Nagram header long-press search path is disabled in MaxGram. Header taps use profile navigation, while the explicit chat-search action remains separate. A failed/cancelled cached dialog-load future can be retried instead of keeping the chat list permanently failed.
+
+
+## Installed startup and current WEB review (2026-11-18)
+
+The dev.2 artifact from commit `6437baf6a404dea08e100b526bc173ed604642ad` compiled and passed the installed disclaimer, phone screen, country-order, help/legal layout and RU/EN switching checks in run `44297050544`. Its additional codec instrumentation raced Application.onCreate and observed NativeLoader before initialization; the runner now waits for main-thread startup. This is not a completed full device-test pass.
+
+The current official WEB entry `0.CaKO2Ayj.js` now declares version 26.11.8 (22163), still at wss://api.oneme.ru/websocket. Reachable chunk `CebawyPl.js` retains protocol 11, WEB/WEBPUSH, browser User-Agent and UUID device IDs. Their hashes and review time are recorded in the session catalog. New/unbound default profiles move to this reviewed version; existing token-bound profiles and explicitly pinned choices are preserved. This source review does not establish successful account login or 72-hour acceptance.

@@ -14,6 +14,9 @@ public class CodecInstrumentation extends Instrumentation {
     @Override public void onStart() {
         Bundle result = new Bundle();
         try {
+            // Instrumentation.start() can race the target Application.onCreate().
+            // Wait for that main-thread startup before checking its JNI state.
+            waitForIdleSync();
             CodecDeviceSmoke.verify(getTargetContext().getClassLoader());
             java.util.concurrent.atomic.AtomicReference<Throwable> uiFailure = new java.util.concurrent.atomic.AtomicReference<>();
             runOnMainSync(() -> {

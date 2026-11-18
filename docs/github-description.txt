@@ -1,1 +1,1 @@
-MAXGRAM CLIENT — unofficial MAX messenger for Android, based on official Telegram with native MAX sign-in and local privacy controls.
+MAXGRAM CLIENT — unofficial MAX client for Android, based on Nagram with Telegram UI and native MAX protocol integration.
