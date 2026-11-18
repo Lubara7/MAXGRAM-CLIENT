@@ -35,9 +35,11 @@ Citation placeholders such as `[citation:13]` in the supplied text are not indep
 
 `docs/validation/acceptance.json` is intentionally pending. No live-account observation has been performed. A 72-hour successful observation is a release criterion, not a guarantee against a later restriction. Do not put tokens, phone numbers, verification codes or unredacted protocol frames in the evidence or public artifacts.
 
-## Current known defect
+## Installed-device verification
 
-The alpha.11 Android test detected insufficient Russian legal-footer spacing after a language switch. That build is a prototype; its successful compilation is not a completed UI acceptance test. The next artifact must resolve and retest this defect. The Nagram dev.1 artifact compiled successfully, but its installed test failed before login: the upstream publisher certificate pin aborted JNI_OnLoad and left NativeByteBuffer methods unregistered. The fork preparation now removes this upstream publisher pin; Android APK signing and the saved MaxGram signing-key checks remain. A synchronous native-buffer round trip runs before storage queues, and Android instrumentation verifies it again. These fixes still need an installed-artifact pass.
+The dev.3 APK from `58931cf69beffba50a434116aa5c03177a56ee27` built successfully and passed run `44300603954` on Android 11 with the ARM64 native bridge. First-launch consent, RU/EN phone/legal layout, ordered countries, packaged codecs, native storage, encrypted deleted-copy retention, cache migration and synthetic contact/status/privacy cases passed. [Exact APK hashes and evidence](validation/android-smoke-0.3.0-dev.3.json) are recorded separately from live acceptance.
+
+The upstream Nagram certificate pin and test-runner startup race are resolved in this artifact. The earlier alpha.11 Russian legal-footer spacing defect also passed the installed-layout checks. No real-account phone/token/QR login or 72-hour observation has been completed. Media, QR approval, calls and the remaining unsupported-control cleanup still prevent acceptance as a finished client.
 
 ## Session-core implementation checkpoint
 

@@ -8,7 +8,7 @@ Specification v2 is in progress: see [implementation and acceptance status](docs
 
 Unofficial Android client built on [NextAlone/Nagram](https://github.com/NextAlone/Nagram), with a native MAX backend based on [Komet](https://github.com/KometTeam/Komet).
 
-[Download APK](https://github.com/Lubara7/MAXGRAM-CLIENT/releases) · [Source code](https://github.com/Lubara7/MAXGRAM-CLIENT) · [Build guide](docs/telegram-migration.md)
+[Prototype APK builds](https://github.com/Lubara7/MAXGRAM-CLIENT/actions/workflows/telegram-release.yml) · [Source code](https://github.com/Lubara7/MAXGRAM-CLIENT) · [Build guide](docs/telegram-migration.md)
 
 </div>
 
@@ -16,7 +16,7 @@ The UI base is pinned to NextAlone/Nagram under GPL v3. NagramXF remains a refer
 
 ## Android client
 
-Telegram-style navigation, chat list and message bubbles, connected to MAX. MAX QR sign-in uses a server-issued link and device confirmation. Phone-number sign-in supports CAPTCHA, a verification code, an account password and server-selected outgoing-call verification. The login screen includes language selection, help and MAX legal documents.
+Telegram-style navigation, chat list and message bubbles, connected to MAX. The backend can request and poll a server-issued QR challenge; authenticated QR approval in Devices remains unfinished and QR is absent from the login screen. Phone-number sign-in supports CAPTCHA, a verification code, an account password and server-selected outgoing-call verification. The login screen includes language selection, help and MAX legal documents.
 
 **Languages (specification v2):** Русский · English.
 
@@ -46,7 +46,7 @@ The prepared checkout uses real Telegram UI components and a Java MAX protocol a
 - [Source provenance](SOURCE_PROVENANCE.md)
 - [Release notes and limitations](docs/release-notes.md)
 
-Backend tests cover binary frames, compression, CAPTCHA ordering, cancellation, OTP, call verification, sessions and stable message identifiers. CI also builds the APK, checks its signature and opens the matching prototype artifact in an Android emulator.
+Backend tests cover binary frames, compression, CAPTCHA ordering, cancellation, OTP, call verification, sessions and stable message identifiers. CI also builds the APK, checks its signature and opens the matching prototype artifact in an Android emulator. [The dev.3 installed-device evidence](docs/validation/android-smoke-0.3.0-dev.3.json) records the exact APK hash and successful automated checks; live-account acceptance remains pending.
 
 ## License
 
