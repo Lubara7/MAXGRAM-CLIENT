@@ -33,6 +33,8 @@ Citation placeholders such as `[citation:13]` in the supplied text are not indep
 
 `Publish verified MaxGram APK` is a separate workflow. It downloads the already tested APK and matching source without rebuilding them. `scripts/validate_release.py` requires the APK hash, source revision, session-profile hash, a current official-version review, every acceptance check and a completed observation window of at least 72 hours. Missing, future-dated, mismatched or ban-positive evidence blocks publication.
 
+By explicit owner request, `v0.3.0-dev.3` is now available as an experimental [Pre-release](https://github.com/Lubara7/MAXGRAM-CLIENT/releases/tag/v0.3.0-dev.3), containing the unchanged APK from run `44298589991`, corresponding source and automated evidence. The one-off prototype workflow is restricted to that version and APK hash. This publication does not mark v2 acceptance complete or change the verified-release gate.
+
 `docs/validation/acceptance.json` is intentionally pending. No live-account observation has been performed. A 72-hour successful observation is a release criterion, not a guarantee against a later restriction. Do not put tokens, phone numbers, verification codes or unredacted protocol frames in the evidence or public artifacts.
 
 ## Installed-device verification

@@ -2,13 +2,13 @@
 
 # MAXGRAM CLIENT
 
-Specification v2 is in progress: see [implementation and acceptance status](docs/spec-v2-status.md). APKs remain prototypes. Automatic release publication is disabled; publication requires matching live-account acceptance evidence and a completed 72-hour observation. Neither a session profile nor a successful observation guarantees immunity from later account restrictions.
+Specification v2 is in progress: see [implementation and acceptance status](docs/spec-v2-status.md). APKs remain prototypes. The [dev.3 test APK](https://github.com/Lubara7/MAXGRAM-CLIENT/releases/tag/v0.3.0-dev.3) is published as an explicitly requested experimental Pre-release. Verified releases require matching live-account acceptance evidence and a completed 72-hour observation. Neither a session profile nor a successful observation guarantees immunity from later account restrictions.
 
 **The MAX messenger. The Telegram experience.**
 
 Unofficial Android client built on [NextAlone/Nagram](https://github.com/NextAlone/Nagram), with a native MAX backend based on [Komet](https://github.com/KometTeam/Komet).
 
-[Prototype APK builds](https://github.com/Lubara7/MAXGRAM-CLIENT/actions/workflows/telegram-release.yml) · [Source code](https://github.com/Lubara7/MAXGRAM-CLIENT) · [Build guide](docs/telegram-migration.md)
+[Test APK release](https://github.com/Lubara7/MAXGRAM-CLIENT/releases/tag/v0.3.0-dev.3) · [Source code](https://github.com/Lubara7/MAXGRAM-CLIENT) · [Build guide](docs/telegram-migration.md)
 
 </div>
 
