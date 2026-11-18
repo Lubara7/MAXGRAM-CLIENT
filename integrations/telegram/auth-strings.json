@@ -59,7 +59,14 @@
     "TgMaxTokenLogin": "Log in with your token",
     "TgMaxTokenCredential": "Own __oneme_auth JSON or token",
     "TgMaxTokenProfile": "Original WEB INIT payload (JSON)",
-    "TgMaxTokenInstructions": "Use only your own account. At web.max.ru copy __oneme_auth from Application → Local Storage. In Network → WS, copy the first outgoing INIT frame (opcode 6) from that same session. Paste both below. The original device ID and browser profile are required: a token alone cannot reconstruct them. This app does not read browser storage or send these values anywhere except MAX."
+    "TgMaxTokenInstructions": "Use only your own account. At web.max.ru copy __oneme_auth from Application → Local Storage. In Network → WS, copy the first outgoing INIT frame (opcode 6) from that same session. Paste both below. The original device ID and browser profile are required: a token alone cannot reconstruct them. This app does not read browser storage or send these values anywhere except MAX.",
+    "TgMaxDebugTitle": "Debug menu",
+    "TgMaxDebugInfo": "Record metadata for up to 512 MAX packets. Tokens, login codes, phone numbers, headers and message text are excluded. The journal stays in memory; disabling recording clears it.",
+    "TgMaxDebugRecord": "Record protocol metadata",
+    "TgMaxDebugRefresh": "Refresh journal",
+    "TgMaxDebugExport": "Export journal",
+    "TgMaxDebugClear": "Clear journal",
+    "TgMaxDebugSaved": "Journal saved"
   },
   "values-ru": {
     "TgMaxLanguageTitle": "На каком языке продолжить?",
@@ -121,7 +128,14 @@
     "TgMaxTokenLogin": "Войти по своему токену",
     "TgMaxTokenCredential": "Свой __oneme_auth (JSON) или токен",
     "TgMaxTokenProfile": "Исходный WEB INIT (JSON)",
-    "TgMaxTokenInstructions": "Используйте только свой аккаунт. На web.max.ru скопируйте __oneme_auth из Application → Local Storage. В Network → WS скопируйте первый исходящий INIT (opcode 6) той же сессии. Вставьте оба значения ниже. Нужны исходные deviceId и профиль браузера: восстановить их по одному токену невозможно. Приложение не читает хранилище браузера и отправляет эти данные только MAX."
+    "TgMaxTokenInstructions": "Используйте только свой аккаунт. На web.max.ru скопируйте __oneme_auth из Application → Local Storage. В Network → WS скопируйте первый исходящий INIT (opcode 6) той же сессии. Вставьте оба значения ниже. Нужны исходные deviceId и профиль браузера: восстановить их по одному токену невозможно. Приложение не читает хранилище браузера и отправляет эти данные только MAX.",
+    "TgMaxDebugTitle": "Отладочное меню",
+    "TgMaxDebugInfo": "Записываются метаданные последних 512 пакетов MAX. Токены, коды входа, номера телефонов, заголовки и текст сообщений исключены. Журнал хранится в памяти и очищается при выключении записи.",
+    "TgMaxDebugRecord": "Записывать метаданные протокола",
+    "TgMaxDebugRefresh": "Обновить журнал",
+    "TgMaxDebugExport": "Экспортировать журнал",
+    "TgMaxDebugClear": "Очистить журнал",
+    "TgMaxDebugSaved": "Журнал сохранён"
   },
   "values-es": {
     "TgMaxLanguageTitle": "¿En qué idioma quieres continuar?",

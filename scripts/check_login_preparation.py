@@ -100,6 +100,11 @@ assert 'TgMaxPrivacyActivity(currentAccount)' in settings
 assert 'TgMaxSessionActivity' in (client / 'TMessagesProj/src/main/java/io/github/lubara7/tgmax/telegram/TgMaxPrivacyActivity.java').read_text()
 assert 'TgMaxTokenActivity' in login
 print('MAX account fields, privacy/session screens and explicit own-token login prepared')
+assert 'TgMaxDebugActivity.versionTap(this, v, currentAccount)' in settings
+assert 'versionView.setOnLongClickListener(v -> true)' in settings
+debug = (java_root / 'io/github/lubara7/tgmax/telegram/TgMaxDebugActivity.java').read_text()
+assert '++progress.count < 7' in debug and 'BuildConfig.DEBUG' in debug
+assert 'Intent.ACTION_CREATE_DOCUMENT' in debug
 
 manifest=(client / 'TMessagesProj/src/main/AndroidManifest.xml').read_text()
 assert 'android.permission.READ_CONTACTS' in manifest

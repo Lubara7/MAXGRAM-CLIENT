@@ -64,3 +64,8 @@ WEB wire-format correction: pinned PyMax `protocol/ws/protocol.py` uses text JSO
 
 
 Contacts checkpoint: the Telegram-compatible contact response now contains contact rows as well as user objects. After Android READ_CONTACTS permission, names are matched locally by normalized international phone numbers; the phonebook is not uploaded. Local contact removal hides a contact in the client's own store and avoids deleting Android phonebook records. Profile metadata converts local adapter IDs back to actual MAX IDs. The supplied APK's cg4 contact options confirm the BOT flag. Live contact/presence acceptance remains pending.
+
+
+## Debug diagnostics checkpoint (2026-11-18)
+
+Seven consecutive version taps open the MaxGram debug menu. The old Nagram/Telegram debug handlers are guarded out. All diagnostic preferences use `debug_` keys. Recording defaults to off and is isolated per account; the bounded journal holds the latest 512 packet metadata entries in memory. Its input type excludes payloads and HTTP headers, so tokens, phone numbers, verification codes, device IDs and message text cannot enter an export. Disabling recording or logging out clears the journal. Export uses Android's document picker and requires the user's chosen destination. These are protocol metadata, not full frame dumps. Incoming-message simulation and other experimental tools remain pending.

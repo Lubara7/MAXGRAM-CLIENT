@@ -44,6 +44,7 @@ public final class MaxClient implements Closeable {
     private volatile boolean interactive = true;
     private volatile Map<String, Object> handshake = Maps.of();
     private final CompletableFuture<Void> closedSignal = new CompletableFuture<>();
+    private volatile Consumer<MaxProtocolJournal.Entry> traceListener;
 
     public MaxClient(OkHttpClient http, MaxDevice device) { this(http, device, ENDPOINT, 30_000, () -> CompletableFuture.completedFuture(null)); }
 
@@ -106,7 +107,10 @@ public final class MaxClient implements Closeable {
                         @Override public void onMessage(WebSocket ws, ByteString bytes) {
                             if (ws != socket) return;
                             if (usesJson()) { disconnected(ws, new MaxException("UNEXPECTED_BINARY_FRAME")); return; }
-                            try { receive(codec.decode(bytes.toByteArray())); }
+                            try {
+                                MaxFrame frame = codec.decode(bytes.toByteArray());
+                                trace(true, frame, bytes.size()); receive(frame);
+                            }
                             catch (RuntimeException e) {
                                 String detail = e instanceof MaxException ? ((MaxException) e).code : "INVALID_RESPONSE";
                                 disconnected(ws, new MaxException("PROTOCOL_ERROR:" + detail, e));
@@ -116,7 +120,11 @@ public final class MaxClient implements Closeable {
                         @Override public void onMessage(WebSocket ws, String text) {
                             if (ws != socket) return;
                             if (!usesJson()) { disconnected(ws, new MaxException("UNEXPECTED_TEXT_FRAME")); return; }
-                            try { receive(jsonCodec.decode(text)); }
+                            try {
+                                MaxFrame frame = jsonCodec.decode(text);
+                                trace(true, frame, traceListener == null ? 0 : text.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
+                                receive(frame);
+                            }
                             catch (RuntimeException failure) { disconnected(ws, new MaxException("PROTOCOL_ERROR", failure)); }
                         }
 
@@ -152,6 +160,7 @@ public final class MaxClient implements Closeable {
     public boolean isConnected() { return ready; }
     public void addPushListener(Consumer<MaxFrame> listener) { listeners.add(listener); }
     public void addConnectionListener(Consumer<Boolean> listener) { connectionListeners.add(listener); }
+    public void setTraceListener(Consumer<MaxProtocolJournal.Entry> listener) { traceListener = listener; }
 
     public CompletableFuture<Map<String, Object>> request(int opcode, Map<String, Object> payload) {
         CompletableFuture<Map<String, Object>> result = new CompletableFuture<>();
@@ -213,7 +222,27 @@ public final class MaxClient implements Closeable {
 
     public boolean usesJson() { return !device.profile.usesLegacyBinary(); }
     private boolean write(WebSocket socket, MaxFrame frame) {
-        return usesJson() ? socket.send(jsonCodec.encode(frame)) : socket.send(ByteString.of(codec.encode(frame)));
+        boolean accepted;
+        int size;
+        if (usesJson()) {
+            String text = jsonCodec.encode(frame);
+            accepted = socket.send(text);
+            size = traceListener == null ? 0 : text.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+        } else {
+            byte[] bytes = codec.encode(frame);
+            accepted = socket.send(ByteString.of(bytes)); size = bytes.length;
+        }
+        if (accepted) trace(false, frame, size);
+        return accepted;
+    }
+
+    private void trace(boolean incoming, MaxFrame frame, int size) {
+        Consumer<MaxProtocolJournal.Entry> listener = traceListener;
+        if (listener == null) return;
+        try {
+            listener.accept(new MaxProtocolJournal.Entry(System.currentTimeMillis(), incoming, usesJson(),
+                    frame.command, frame.sequence, frame.opcode, size));
+        } catch (RuntimeException ignored) { /* Diagnostics must not interrupt a conversation. */ }
     }
 
     private void receive(MaxFrame frame) {

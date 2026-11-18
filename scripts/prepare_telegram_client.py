@@ -480,6 +480,22 @@ def restrict_max_ui(target):
     profile.write_text(text)
 
 
+def configure_debug_menu(target):
+    settings = target / "TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java"
+    text = settings.read_text()
+    start = text.index("        versionView.setOnClickListener(v -> {")
+    end = text.index("        navigationBar = new View(context);", start)
+    text = text[:start] + f'''        versionView.setOnClickListener(v -> {JAVA_PREFIX}TgMaxDebugActivity.versionTap(this, v, currentAccount));
+        versionView.setOnLongClickListener(v -> true);
+
+''' + text[end:]
+    settings.write_text(text)
+    add_after_opening(settings, r"public void openNagramDebugMenu\(View view\)",
+                      f"        if ({JAVA_PREFIX}TgMaxRuntime.enabled()) return;\n")
+    add_after_opening(settings, r"public void openDebugMenu\(\)",
+                      f"        if ({JAVA_PREFIX}TgMaxRuntime.enabled()) return;\n")
+
+
 def configure_phone_login(target):
     ui = target / "TMessagesProj/src/main/java/org/telegram/ui"
     login = ui / "LoginActivity.java"
@@ -696,6 +712,7 @@ def main():
     patch_password_login(output)
     isolate_client_services(output)
     restrict_max_ui(output)
+    if base_key == "nagram": configure_debug_menu(output)
     configure_phone_login(output)
     shutil.copytree(ROOT / "integrations/telegram/src/main/java", output / "TMessagesProj/src/main/java", dirs_exist_ok=True)
     shutil.copytree(ROOT / "integrations/telegram/src/main/assets", output / "TMessagesProj/src/main/assets", dirs_exist_ok=True)

@@ -67,6 +67,7 @@ def main():
     if actual != lock["commit"]: raise SystemExit("Telegram pin mismatch")
     java = source / "TMessagesProj/src/main/java"
     files = list((ROOT / "integrations/telegram/src/main/java").rglob("*.java"))
+    files.append(ROOT / 'integrations/telegram/ui/TgMaxNative.java')
     adapter = "\n".join(p.read_text() for p in files)
     needed_fields = set(re.findall(r"\.(\w+)", adapter))
     namespaces = [(name, "org/telegram/tgnet/" + path + name + ".java") for name, path in
@@ -108,7 +109,8 @@ def main():
     method = (java / "org/telegram/tgnet/TLMethod.java").read_text()
     if "extends TLObject" not in method: raise SystemExit("TLMethod hierarchy changed")
     write(stubs / "org/telegram/tgnet/TLMethod.java", "package org.telegram.tgnet; public class TLMethod<T extends TLObject> extends TLObject {}\n")
-    for name in ["RequestDelegate", "RequestDelegateTimestamp", "WriteToSocketDelegate", "QuickAckDelegate"]:
+    for name in ["RequestDelegate", "RequestDelegateTimestamp", "WriteToSocketDelegate", "QuickAckDelegate",
+                 "NativeByteBuffer", "AbstractSerializedData", "InputSerializedData", "OutputSerializedData", "TLDataSourceType"]:
         write(stubs / f"org/telegram/tgnet/{name}.java", (java / f"org/telegram/tgnet/{name}.java").read_text())
     connection = (java / "org/telegram/tgnet/ConnectionsManager.java").read_text()
     if "void onConnectionStateChanged(final int state, final int currentAccount)" not in connection:
@@ -135,9 +137,16 @@ public class MessagesController {
           "package org.telegram.messenger; public class ApplicationLoader { public static android.content.Context applicationContext; }\n")
     write(stubs / "org/telegram/messenger/Utilities.java", """package org.telegram.messenger;
 public class Utilities { public static DispatchQueue stageQueue;
+ public static String bytesToHex(byte[] bytes) { return ""; }
  public static class DispatchQueue { public boolean postRunnable(Runnable runnable) {return false;} }
 }
 """)
+    native_loader = (java / 'org/telegram/messenger/NativeLoader.java').read_text()
+    if 'public static boolean loaded()' not in native_loader or 'public static StringBuilder log' not in native_loader:
+        raise SystemExit('NativeLoader API changed')
+    write(stubs / 'org/telegram/messenger/NativeLoader.java', 'package org.telegram.messenger; public class NativeLoader { public static StringBuilder log; public static boolean loaded() {return false;} }\n')
+    write(stubs / 'org/telegram/messenger/BuildVars.java', 'package org.telegram.messenger; public class BuildVars { public static final boolean LOGS_ENABLED=false; }\n')
+    write(stubs / 'org/telegram/messenger/FileLog.java', 'package org.telegram.messenger; public class FileLog { public static void e(String value) {} public static void e(Throwable value) {} }\n')
     locale_source = (java / "org/telegram/messenger/LocaleController.java").read_text()
     locale = classes(locale_source)["LocaleInfo"]["fields"]
     locale_names = ["name", "nameEnglish", "shortName", "pluralLangCode", "builtIn"]

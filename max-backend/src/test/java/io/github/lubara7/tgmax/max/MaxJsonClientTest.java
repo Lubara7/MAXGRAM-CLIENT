@@ -36,7 +36,10 @@ public class MaxJsonClientTest {
                 else respond(ws,frame,Maps.of());
             }
         }));server.start();client=new MaxClient(new OkHttpClient(),device(),server.url("/websocket").toString(),2000);
+        MaxProtocolJournal journal=new MaxProtocolJournal();client.setTraceListener(journal::record);
         assertEquals(9007199254740997L,Maps.number(new MaxApi(client).login("synthetic-owner-token").get(4,TimeUnit.SECONDS).get("viewerId")));
+        String log=journal.export();assertTrue(log.contains("opcode=19"));assertTrue(log.contains("JSON11"));
+        assertFalse(log.contains("synthetic-owner-token"));assertFalse(log.contains("original-web-id"));assertFalse(log.contains("real-test-browser"));
     }
     @Test public void webSocketsAlsoWaitForExplicitConsent()throws Exception{
         CompletableFuture<Void> permission=new CompletableFuture<>();server.start();

@@ -30,6 +30,8 @@ public final class TgMaxRuntime {
     private final TgMaxModels models;
     private final MaxMessageArchive archive;
     private final MaxPhonebookNames phonebook;
+    private final TgMaxDebugState debugState;
+    private final MaxProtocolJournal protocolJournal = new MaxProtocolJournal();
     private final java.util.Set<String> removedContacts;
     private final android.content.SharedPreferences localPreferences;
     private volatile MaxClient client;
@@ -83,6 +85,7 @@ public final class TgMaxRuntime {
     private TgMaxRuntime(int account) {
         this.account = account;
         Context context = ApplicationLoader.applicationContext;
+        debugState = new TgMaxDebugState(context, account);
         privacyPreferences = context.getSharedPreferences("max_privacy_" + account, Context.MODE_PRIVATE);
         privacy = new MaxPrivacyPolicy(privacyPreferences.getBoolean("ghost", false),
                 privacyPreferences.getBoolean("unread", false), privacyPreferences.getBoolean("noTyping", false));
@@ -118,6 +121,9 @@ public final class TgMaxRuntime {
     }
 
     private void attach(MaxClient connection) {
+        connection.setTraceListener(debugState.logging() ? entry -> {
+            if (debugState.logging()) protocolJournal.record(entry);
+        } : null);
         connection.addPushListener(frame -> executor.execute(() -> {
             try { push(frame); }
             catch (RuntimeException failure) { allDialogs = null; }
@@ -128,6 +134,20 @@ public final class TgMaxRuntime {
             if (!connected) { login = null; allDialogs = null; }
         });
     }
+
+    public boolean protocolLogging() { return debugState.logging(); }
+    public void protocolLogging(boolean enabled) {
+        debugState.logging(enabled);
+        client.setTraceListener(enabled ? entry -> {
+            if (debugState.logging()) protocolJournal.record(entry);
+        } : null);
+        if (!enabled) protocolJournal.clear();
+    }
+    public String protocolLog() {
+        if (!debugState.allowed()) throw new IllegalStateException("Debug menu is locked");
+        return protocolJournal.export();
+    }
+    public void clearProtocolLog() { protocolJournal.clear(); }
 
     public static String recommendedWebVersion(Context context) {
         try (java.io.InputStream stream = context.getAssets().open("tgmax-session-profiles.json")) {
@@ -278,6 +298,7 @@ public final class TgMaxRuntime {
     public void cleanup(boolean reset) {
         requests.keySet().forEach(this::cancel);
         if (reset) {
+            protocolLogging(false);
             privacyPreferences.edit().clear().apply();
             archive.reset();
             local.clear();
@@ -510,6 +531,7 @@ public final class TgMaxRuntime {
         }
         if (request instanceof TLRPC.TL_auth_logOut) {
             return api.logout().handleAsync((data, failure) -> {
+                protocolLogging(false);
                 archive.reset();
                 local.clear();
                 return new TLRPC.TL_auth_loggedOut();

@@ -16,7 +16,7 @@ public final class TgMaxNative {
         NativeByteBuffer buffer = null;
         try {
             buffer = new NativeByteBuffer(12);
-            if (buffer.address == 0 || buffer.buffer == null || !buffer.buffer.isDirect()) {
+            if (buffer.buffer == null || !buffer.buffer.isDirect()) {
                 throw new IllegalStateException("MAXGRAM storage buffer is unavailable");
             }
             buffer.writeInt32(0x4d415847);
