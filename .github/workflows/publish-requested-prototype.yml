@@ -1,0 +1,95 @@
+name: Publish requested dev.3 prototype
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-requested-prototype.yml
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    # One explicit owner-requested prototype, not a verified-release bypass for future builds.
+    if: contains(github.event.head_commit.message, '[publish-prototype v0.3.0-dev.3]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: publish-prototype-v0.3.0-dev.3
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BUILD_RUN_ID: '44298589991'
+      EXPECTED_SOURCE: '58931cf69beffba50a434116aa5c03177a56ee27'
+      EXPECTED_APK_SHA256: 'a2b52027a122767596ce6757413b37a278c2f030edb0c397e0a0804244a04531'
+      RELEASE_TAG: v0.3.0-dev.3
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify the original build and installed-device checks
+        run: |
+          mkdir -p validation dist
+          gh api "repos/$GH_REPO/actions/runs/$BUILD_RUN_ID" > validation/build.json
+          gh api "repos/$GH_REPO/actions/runs/44298590154" > validation/android.json
+          gh api "repos/$GH_REPO/actions/runs/44300603954" > validation/device.json
+          python3 - <<'PYCODE'
+          import json, os, pathlib
+          for path in pathlib.Path('validation').glob('*.json'):
+              run = json.loads(path.read_text())
+              assert run['head_sha'] == os.environ['EXPECTED_SOURCE'], path
+              assert run['status'] == 'completed' and run['conclusion'] == 'success', path
+          print('Original build, Android checks and installed-artifact checks passed')
+          PYCODE
+      - name: Download the unchanged APK and corresponding GPL source
+        run: |
+          gh run download "$BUILD_RUN_ID" --repo "$GH_REPO" -n maxgram-apk -D dist
+          gh run download "$BUILD_RUN_ID" --repo "$GH_REPO" -n maxgram-source -D dist
+      - name: Verify exact artifact bytes and prototype identity
+        run: |
+          (cd dist && sha256sum --check --strict SHA256SUMS.txt)
+          python3 - <<'PYCODE'
+          import hashlib, json, os, pathlib
+          apk = pathlib.Path('dist/MAXGRAM-CLIENT-0.3.0-dev.3-arm64-v8a.apk')
+          assert hashlib.file_digest(apk.open('rb'), 'sha256').hexdigest() == os.environ['EXPECTED_APK_SHA256']
+          provenance = json.loads(pathlib.Path('dist/build-provenance.json').read_text())
+          assert provenance['sourceCommit'] == os.environ['EXPECTED_SOURCE']
+          assert provenance['version'] == '0.3.0-dev.3' and provenance['tag'] == os.environ['RELEASE_TAG']
+          assert provenance['status'] == 'prototype'
+          evidence = json.loads(pathlib.Path('docs/validation/android-smoke-0.3.0-dev.3.json').read_text())
+          assert evidence['apkSha256'] == os.environ['EXPECTED_APK_SHA256']
+          assert evidence['sourceCommit'] == os.environ['EXPECTED_SOURCE']
+          assert evidence['sessionProfileSha256'] == provenance['sessionProfileSha256']
+          assert evidence['liveAccountLoginTested'] is False and evidence['observation72HoursCompleted'] is False
+          print('Publishing the existing prototype bytes; live acceptance remains pending')
+          PYCODE
+      - name: Create a draft with every download attached
+        run: |
+          gh release create "$RELEASE_TAG" \
+            dist/MAXGRAM-CLIENT-0.3.0-dev.3-arm64-v8a.apk \
+            dist/MAXGRAM-CLIENT-0.3.0-dev.3-source.tar.gz \
+            dist/SHA256SUMS.txt dist/signature-verification.txt \
+            dist/build-provenance.json dist/apk-manifest.txt \
+            docs/validation/android-smoke-0.3.0-dev.3.json \
+            --repo "$GH_REPO" --target "$EXPECTED_SOURCE" \
+            --title "MAXGRAM CLIENT 0.3.0-dev.3 — Test build" \
+            --prerelease --draft --latest=false \
+            --notes-file docs/releases/v0.3.0-dev.3-prototype.md
+      - name: Publish as an experimental pre-release
+        run: |
+          gh release edit "$RELEASE_TAG" --repo "$GH_REPO" --draft=false --prerelease --latest=false
+          gh release view "$RELEASE_TAG" --repo "$GH_REPO" --json url,isDraft,isPrerelease,assets > published-release.json
+          python3 - <<'PYCODE'
+          import json, pathlib
+          release = json.loads(pathlib.Path('published-release.json').read_text())
+          assert release['isDraft'] is False and release['isPrerelease'] is True
+          required = {'MAXGRAM-CLIENT-0.3.0-dev.3-arm64-v8a.apk',
+                      'MAXGRAM-CLIENT-0.3.0-dev.3-source.tar.gz', 'SHA256SUMS.txt',
+                      'signature-verification.txt', 'build-provenance.json',
+                      'apk-manifest.txt', 'android-smoke-0.3.0-dev.3.json'}
+          assert required <= {a['name'] for a in release['assets']}
+          print(release['url'])
+          PYCODE
