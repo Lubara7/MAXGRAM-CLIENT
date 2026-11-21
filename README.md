@@ -2,13 +2,13 @@
 
 # MAXGRAM CLIENT
 
-Specification v2 is in progress: see [implementation and acceptance status](docs/spec-v2-status.md). APKs remain prototypes. The [dev.3 test APK](https://github.com/Lubara7/MAXGRAM-CLIENT/releases/tag/v0.3.0-dev.3) is published as an explicitly requested experimental Pre-release. Verified releases require matching live-account acceptance evidence and a completed 72-hour observation. Neither a session profile nor a successful observation guarantees immunity from later account restrictions.
+Experimental Komet-based Android preview. [Download ARM64 APK](https://github.com/Lubara7/MAXGRAM-CLIENT/releases/download/v0.4.0-dev.3%2B18-komet-ui/MAXGRAM-CLIENT-0.4.0-dev.3-komet-ui-arm64-v8a.apk) · [Release and source](https://github.com/Lubara7/MAXGRAM-CLIENT/releases/tag/v0.4.0-dev.3%2B18-komet-ui) · [Validation report](docs/validation/komet-preview-0.4.0-dev.3.json). Real-account acceptance and the 72-hour observation remain unfinished.
 
 **The MAX messenger. The Telegram experience.**
 
 Unofficial Android client based on [Komet](https://github.com/KometTeam/Komet), with a Telegram-style Flutter interface.
 
-[Test APK release](https://github.com/Lubara7/MAXGRAM-CLIENT/releases/tag/v0.3.0-dev.3) · [Source code](https://github.com/Lubara7/MAXGRAM-CLIENT) · [Build guide](docs/telegram-migration.md)
+[Komet preview release](https://github.com/Lubara7/MAXGRAM-CLIENT/releases/tag/v0.4.0-dev.3%2B18-komet-ui) · [Source code](https://github.com/Lubara7/MAXGRAM-CLIENT) · [Build guide](docs/komet-ui-migration.md)
 
 </div>
 
@@ -16,11 +16,11 @@ The current direction uses pinned Komet sources under GPL v3. The older Nagram/J
 
 ## Komet preview
 
-The `komet-telegram-ui` branch contains the newer Komet-based client direction: [preparation, implemented changes and limitations](docs/komet-ui-migration.md). It preserves Komet's MAX implementation and recreates Telegram-style screens in Flutter. The published 0.3.0 APK belongs to the older Java client and does not contain these Flutter changes.
+The `main` branch now contains the Komet-based client: [preparation, implemented changes and limitations](docs/komet-ui-migration.md). It preserves Komet's MAX implementation and recreates Telegram-style screens in Flutter. The published 0.3.0 APK belongs to the older Java client and does not contain these Flutter changes.
 
 Implemented changes include the Telegram-style theme and chat drawer, MAX phone login with the requested 44 countries, RU/EN, help/legal links, duplicate-submit protection, actual OTP resend and retryable message-history errors. Komet's contacts, calls, media and local-feature implementations remain available for further verification.
 
-Use Flutter 3.44.3. Initialize `upstream/komet-ui`, run `python3 scripts/prepare_komet_client.py`, then run `flutter pub get`, `flutter analyze --no-pub --no-fatal-infos lib test` and `flutter test --no-pub` inside `build/komet-client`. Set `CI=true FLUTTER_SUPPRESS_ANALYTICS=true` for these commands. The preview package is `io.github.lubara7.maxgram.preview`; no APK has been produced from this branch. Full Telegram UI parity and real-account verification remain unfinished.
+Use Flutter 3.44.3. Initialize `upstream/komet-ui`, run `python3 scripts/prepare_komet_client.py`, then run `flutter pub get`, `flutter analyze --no-pub --no-fatal-infos lib test` and `flutter test --no-pub` inside `build/komet-client`. Set `CI=true FLUTTER_SUPPRESS_ANALYTICS=true` for these commands. The preview package is `io.github.lubara7.maxgram.preview`; signed preview APKs and matching source are published in the [Komet release](https://github.com/Lubara7/MAXGRAM-CLIENT/releases/tag/v0.4.0-dev.3%2B18-komet-ui). Full Telegram UI parity and real-account verification remain unfinished.
 
 ## Legacy native client
 

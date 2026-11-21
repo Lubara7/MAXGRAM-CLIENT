@@ -1,6 +1,6 @@
 # MaxGram on Komet
 
-This experimental branch uses Komet as the MAX client and changes its Flutter presentation. It does not translate MAX traffic into Telegram MTProto. Existing Java Telegram screens cannot be mounted directly in Flutter; their appearance and interactions must be recreated using Komet's own state and callbacks.
+This experimental client uses Komet as the MAX client and changes its Flutter presentation. It does not translate MAX traffic into Telegram MTProto. Existing Java Telegram screens cannot be mounted directly in Flutter; their appearance and interactions must be recreated using Komet's own state and callbacks.
 
 Komet is pinned to `7bbb73bd2c05877e48b37f6ec6f096471a341404` (0.5.19+19). Its GPL-3.0 license, copyright and attribution remain in the prepared source. The published native MaxGram 0.3.0 development release remains a separate client.
 
@@ -12,6 +12,7 @@ Komet is pinned to `7bbb73bd2c05877e48b37f6ec6f096471a341404` (0.5.19+19). Its G
 | Android chat list below 900 logical pixels | “Чаты”/“Chats” toolbar, drawer, search, larger avatars, underlined folder tabs | Existing chat, folder, story, search and selection callbacks |
 | Navigation | Drawer routes to contacts, calls, saved messages, downloads and settings | Existing Komet screens, with back navigation for standalone routes |
 | Login | Telegram-style phone screen, 44 requested countries, RU/EN selection, help and MAX legal links in the in-app browser, first-use disclaimer | Existing phone/code/password and token APIs; duplicate phone requests prevented; nonfunctional QR/session-file options removed |
+| Software keyboard | Continue floats above the IME; the legal footer yields space while typing | Verified with synthetic input, without sending a phone-code request |
 | Code resend | Actual resend request, updated verification token, cooldown and concurrent-request protection | A failed resend preserves the current challenge; an old response cannot overwrite a new connection's challenge |
 | History errors | Retryable errors remain errors instead of marking a conversation as exhausted; visible retry guidance | One reviewed patch in `lib/backend/modules/messages.dart`; loading state always reset |
 | Branding and updates | MAXGRAM label, separate preview package, updater points to this repository | Only release tags ending in `-komet-ui` are eligible for this client |
@@ -30,16 +31,22 @@ CI=true FLUTTER_SUPPRESS_ANALYTICS=true flutter analyze --no-pub --no-fatal-info
 CI=true FLUTTER_SUPPRESS_ANALYTICS=true flutter test --no-pub
 ```
 
-Use Flutter 3.44.3. The preparer checks the upstream commit, refuses to overwrite an existing output directory, applies the pinned patch and writes `maxgram-preparation.json`. A separate source checkout can be selected with `--source`; cloning still uses only its pinned commit, not its uncommitted changes. Analysis covers the complete Flutter application and tests (`lib` and `test`); the vendored Cargokit build tool is a separate Dart package with its own dependency resolution. The CI job performs analysis and widget tests, without producing an APK/AAB.
+Use Flutter 3.44.3. The preparer checks the upstream commit, refuses to overwrite an existing output directory, applies the pinned patch and writes `maxgram-preparation.json`. A separate source checkout can be selected with `--source`; cloning still uses only its pinned commit, not its uncommitted changes. Analysis covers the complete Flutter application and tests (`lib` and `test`); the vendored Cargokit build tool is a separate Dart package with its own dependency resolution. The `komet-ui` workflow runs analysis and tests. The separate `komet-apk` workflow also builds ARM64/x86_64 APKs, verifies their signatures and native libraries, checks first use and the software keyboard in an Android 11 emulator, then publishes the experimental pre-release.
+
+## Published verification
+
+The [Android checks and artifact verification](https://github.com/Lubara7/MAXGRAM-CLIENT/actions/runs/44928797893) identify the exact source commit and APK hashes. The [validation report](validation/komet-preview-0.4.0-dev.3.json) records the automated checks separately from unverified live-account behavior. Phone login keeps the requested country catalog rather than replacing it with regional registration hints. The updater normalizes preview versions and uses build metadata for comparisons.
 
 ## Remaining work
 
 1. Complete Telegram chat header, composer, media sheets, profile, privacy and settings layouts, preserving MAX-only capabilities. Replace inherited Komet artwork and remove remaining controls without a verified MAX equivalent.
 2. Verify MAX phone/captcha/call confirmation and QR-device linking on a real test account. Retaining Komet's code does not establish that every MAX flow works or that bans cannot occur.
 3. Connect and verify local feature settings such as ghost mode, deleted-message retention and typing suppression. Existing modules require behavioral tests before their reliability is claimed.
-4. Supply MaxGram's own notification service configuration. The preview package is `io.github.lubara7.maxgram.preview`, flavor `maxgram`; Komet's bundled Firebase configurations belong to other application IDs and cannot configure this package. The Google services plugin is applied only when `android/app/src/maxgram/google-services.json` is supplied. Without it, Firebase initialization exits through Komet's existing error handler; remote background push is unavailable. No APK has been built for this branch.
+4. Supply MaxGram's own notification service configuration. The preview package is `io.github.lubara7.maxgram.preview`, flavor `maxgram`; Komet's bundled Firebase configurations belong to other application IDs and cannot configure this package. The Google services plugin is applied only when `android/app/src/maxgram/google-services.json` is supplied. Without it, Firebase initialization exits through Komet's existing error handler; remote background push is unavailable. The signed [Komet preview APK](https://github.com/Lubara7/MAXGRAM-CLIENT/releases/tag/v0.4.0-dev.3%2B18-komet-ui) is published with source and startup evidence.
 5. Review upstream external services, notification registration, update asset selection, deep links and native platform branding before shipping the fork. Preserve license notices when replacing visible product names.
 6. Define an explicit native-client data migration. Do not copy incompatible databases, silently import tokens, or promise upgrade compatibility with the older Java client.
 7. Check remaining Telegram features individually. Local appearance, themes and selected animations can be reused; server-side Telegram features require MAX equivalents.
 
-No real-account login, media, calls or 72-hour observation is claimed by this branch. Its preparation check verifies the pinned implementation and reviewed patch, not that the server accepts a session.
+No real-account login, media, calls or 72-hour observation is claimed by this client. Its preparation check verifies the pinned implementation and reviewed patch, not that the server accepts a session.
+
+The APK application source is `f3d9cc997d82a4ea030df39814346ceafdb45f03`; its release/verification commit is `4fd3cd46d558bd869a9fc196f0b86a4dec591931`. Verification rejects any change to the preparation scripts, upstream pin or application integration between those commits. The release carries the original build provenance and corresponding prepared source alongside the later Android verification provenance.

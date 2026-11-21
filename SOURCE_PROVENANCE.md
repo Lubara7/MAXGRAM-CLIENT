@@ -1,6 +1,16 @@
 # Source provenance
 
-MAXGRAM CLIENT uses NextAlone/Nagram as its active Android UI source and ports selected MAX client protocol operations from Komet. NagramXF is consulted only for selected privacy behavior and is not compiled. Exact revisions are recorded in `upstream.lock.json` and git submodules.
+## Komet-based preview
+
+The current `0.4.0` Komet preview uses Komet 0.5.19+19, pinned to `7bbb73bd2c05877e48b37f6ec6f096471a341404`, under GPL-3.0. MaxGram changes are applied by `scripts/prepare_komet_client.py` from `integrations/komet`; the lock verifies the source commit and the exact reviewed history patch. Protocol, transport and storage implementations otherwise remain pinned.
+
+Komet uses the published `kolibri` 0.1.4 Flutter/Rust binding. Its Rust manifest references `KometTeam/kolibri` tag `dart-v0.1.4`; the wrapper declares MIT OR Apache-2.0. The release source archive includes the modified Komet tree, the binding package, the checked-out core source, the bundled encryption bridge and third-party rlottie sources. Build caches and signing keys are excluded.
+
+The [preview release](https://github.com/Lubara7/MAXGRAM-CLIENT/releases/tag/v0.4.0-dev.3%2B18-komet-ui) includes the actual corresponding source, APK signatures, hashes and build provenance. [Verification](docs/validation/komet-preview-0.4.0-dev.3.json) is tied to the compiled source commit rather than a later documentation-only commit. Existing copyright and license notices are retained.
+
+## Legacy Java client and references
+
+The legacy Java MAXGRAM client uses NextAlone/Nagram as its Android UI source and ports selected MAX client protocol operations from Komet. NagramXF is consulted only for selected privacy behavior and is not compiled. Exact revisions are recorded in `upstream.lock.json` and git submodules.
 
 - NextAlone/Nagram (active UI): https://github.com/NextAlone/Nagram, revision `8f2a8a03aa7aec599150b09d302bfd5023283344`, version 13.1.1 (7237), GPL-3.0-or-later.
 - Telegram Android (compatibility reference): https://github.com/DrKLO/Telegram, revision `21f7d109da6ab3506c9e9577f98c6a38771ab335`, version 13.2.2 (7303). Upstream GPL-2.0-or-later file notices are retained.

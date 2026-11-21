@@ -1,0 +1,182 @@
+{
+  "schema": 1,
+  "application": "MAXGRAM CLIENT",
+  "status": "experimental-pre-release",
+  "version": "0.4.0-dev.3+18",
+  "applicationId": "io.github.lubara7.maxgram.preview",
+  "sourceCommit": "f3d9cc997d82a4ea030df39814346ceafdb45f03",
+  "upstreamCommit": "7bbb73bd2c05877e48b37f6ec6f096471a341404",
+  "buildRun": "https://github.com/Lubara7/MAXGRAM-CLIENT/actions/runs/44924690580",
+  "verificationSourceCommit": "4fd3cd46d558bd869a9fc196f0b86a4dec591931",
+  "verificationRun": "https://github.com/Lubara7/MAXGRAM-CLIENT/actions/runs/44928797893",
+  "sourceAnalysis": {
+    "run": "https://github.com/Lubara7/MAXGRAM-CLIENT/actions/runs/44928133218",
+    "errors": 0,
+    "warnings": 0,
+    "informationalFindings": 29,
+    "testsPassed": 392,
+    "testsSkipped": 3
+  },
+  "evidenceParserRegressionTests": {
+    "passed": 5,
+    "source": "scripts/test_smoke_komet_preview.py"
+  },
+  "buildChecks": {
+    "androidAbis": [
+      "arm64-v8a",
+      "x86_64"
+    ],
+    "apkSignaturesVerified": true,
+    "requiredNativeLibraries": [
+      "libapp.so",
+      "libflutter.so",
+      "libkolibri_dart.so",
+      "libkomet_crypto.so",
+      "librlottie.so"
+    ],
+    "nativeLibrariesVerified": true,
+    "recheckedBuildChecksums": true,
+    "preparation": {
+      "upstreamCommit": "7bbb73bd2c05877e48b37f6ec6f096471a341404",
+      "protectedFiles": 54,
+      "protectedFilesUnchanged": false,
+      "protectedFilesPreserved": 53,
+      "reviewedBackendFixes": [
+        "lib/backend/modules/messages.dart"
+      ],
+      "patchSha256": "c4e937c1e9851664dfa495bb71129201b65b861eb7a2d0f617a1aad13eb4e9d1",
+      "applicationId": "io.github.lubara7.maxgram.preview",
+      "status": "experimental-ui-migration"
+    },
+    "sameSigningReportAsPreviousPreview": true
+  },
+  "artifacts": [
+    {
+      "name": "MAXGRAM-CLIENT-0.4.0-dev.3-komet-ui-arm64-v8a.apk",
+      "abi": "arm64-v8a",
+      "sha256": "7ae3c02348a9c54e09c7dfc6db308f874b33409ad997d272301b3ec2208249af",
+      "bytes": 28448665
+    },
+    {
+      "name": "MAXGRAM-CLIENT-0.4.0-dev.3-komet-ui-x86_64.apk",
+      "abi": "x86_64",
+      "sha256": "569f41bdd065a6078d9880c6b57148f7aabd1e79647e412c3606b13f22d48279",
+      "bytes": 29935822
+    }
+  ],
+  "sourceArchiveSha256": "d35487dce34a726af7b6a9c2cbec3e3931635c463bad3d07f1b6617433203db9",
+  "androidSmoke": {
+    "platform": "Android 11",
+    "apiLevel": 30,
+    "abi": "x86_64",
+    "profile": "pixel_2",
+    "applicationId": "io.github.lubara7.maxgram.preview",
+    "apkSha256": "569f41bdd065a6078d9880c6b57148f7aabd1e79647e412c3606b13f22d48279",
+    "disclaimerObserved": true,
+    "phoneLoginObserved": true,
+    "defaultRussiaObserved": true,
+    "helpControlObserved": true,
+    "languageControlObserved": true,
+    "keyboard": {
+      "keyboardTop": 1169,
+      "continueBottom": 1127,
+      "continueAboveKeyboard": true
+    },
+    "realAccountLoginAttempted": false,
+    "smsRequestSent": false
+  },
+  "limitations": {
+    "fullTelegramInterfaceParity": false,
+    "realMaxAccountLoginVerified": false,
+    "captchaVerified": false,
+    "qrDeviceLinkingVerified": false,
+    "realAccountContactsAndMessagesVerified": false,
+    "realAccountMediaAndCallsVerified": false,
+    "observation72hComplete": false,
+    "backgroundFcmConfigured": false,
+    "legacyNativeDatabaseMigrationImplemented": false
+  },
+  "recordedAt": "2026-11-21T17:16:25.343Z",
+  "release": {
+    "url": "https://github.com/Lubara7/MAXGRAM-CLIENT/releases/tag/v0.4.0-dev.3%2B18-komet-ui",
+    "tag": "v0.4.0-dev.3+18-komet-ui",
+    "sourceCommit": "4fd3cd46d558bd869a9fc196f0b86a4dec591931",
+    "prerelease": true,
+    "draft": false,
+    "matchingApplicationSourceVerified": true,
+    "assets": [
+      {
+        "name": "android-startup-evidence.zip",
+        "bytes": 364697,
+        "sha256": "e45b25e166dfd019edaeceed26f88776dc25edd6661bc6a6ea1d8b8aa9549c24",
+        "url": "https://github.com/Lubara7/MAXGRAM-CLIENT/releases/download/v0.4.0-dev.3%2B18-komet-ui/android-startup-evidence.zip"
+      },
+      {
+        "name": "build-provenance.json",
+        "bytes": 1367,
+        "sha256": "7cb3b3725ed1d55a5eceef7e6db390675dd20817b84f5502ec206f062dfd406a",
+        "url": "https://github.com/Lubara7/MAXGRAM-CLIENT/releases/download/v0.4.0-dev.3%2B18-komet-ui/build-provenance.json"
+      },
+      {
+        "name": "manifest-arm64-v8a.txt",
+        "bytes": 7615,
+        "sha256": "64763cd934a1e4ee1c7ce2d1262c8feb567398f69f5769b0cea92311341fc9f3",
+        "url": "https://github.com/Lubara7/MAXGRAM-CLIENT/releases/download/v0.4.0-dev.3%2B18-komet-ui/manifest-arm64-v8a.txt"
+      },
+      {
+        "name": "manifest-x86_64.txt",
+        "bytes": 7612,
+        "sha256": "70f5202066a7922140d282dca79fa41ae6516367da06d51171c6265ef7da7f07",
+        "url": "https://github.com/Lubara7/MAXGRAM-CLIENT/releases/download/v0.4.0-dev.3%2B18-komet-ui/manifest-x86_64.txt"
+      },
+      {
+        "name": "MAXGRAM-CLIENT-0.4.0-dev.3-komet-ui-arm64-v8a.apk",
+        "bytes": 28448665,
+        "sha256": "7ae3c02348a9c54e09c7dfc6db308f874b33409ad997d272301b3ec2208249af",
+        "url": "https://github.com/Lubara7/MAXGRAM-CLIENT/releases/download/v0.4.0-dev.3%2B18-komet-ui/MAXGRAM-CLIENT-0.4.0-dev.3-komet-ui-arm64-v8a.apk"
+      },
+      {
+        "name": "MAXGRAM-CLIENT-0.4.0-dev.3-komet-ui-source.tar.gz",
+        "bytes": 9520572,
+        "sha256": "d35487dce34a726af7b6a9c2cbec3e3931635c463bad3d07f1b6617433203db9",
+        "url": "https://github.com/Lubara7/MAXGRAM-CLIENT/releases/download/v0.4.0-dev.3%2B18-komet-ui/MAXGRAM-CLIENT-0.4.0-dev.3-komet-ui-source.tar.gz"
+      },
+      {
+        "name": "MAXGRAM-CLIENT-0.4.0-dev.3-komet-ui-x86_64.apk",
+        "bytes": 29935822,
+        "sha256": "569f41bdd065a6078d9880c6b57148f7aabd1e79647e412c3606b13f22d48279",
+        "url": "https://github.com/Lubara7/MAXGRAM-CLIENT/releases/download/v0.4.0-dev.3%2B18-komet-ui/MAXGRAM-CLIENT-0.4.0-dev.3-komet-ui-x86_64.apk"
+      },
+      {
+        "name": "SHA256SUMS.txt",
+        "bytes": 975,
+        "sha256": "f821cdf7c9e81ab41ea114aceece25660944a1729fe4c6594996a13c35c91a7f",
+        "url": "https://github.com/Lubara7/MAXGRAM-CLIENT/releases/download/v0.4.0-dev.3%2B18-komet-ui/SHA256SUMS.txt"
+      },
+      {
+        "name": "signature-arm64-v8a.txt",
+        "bytes": 957,
+        "sha256": "aefff8f35db3f95ba2c254d7d613ac1de9c376413d5faf6d1530a01c62fa233c",
+        "url": "https://github.com/Lubara7/MAXGRAM-CLIENT/releases/download/v0.4.0-dev.3%2B18-komet-ui/signature-arm64-v8a.txt"
+      },
+      {
+        "name": "signature-x86_64.txt",
+        "bytes": 957,
+        "sha256": "aefff8f35db3f95ba2c254d7d613ac1de9c376413d5faf6d1530a01c62fa233c",
+        "url": "https://github.com/Lubara7/MAXGRAM-CLIENT/releases/download/v0.4.0-dev.3%2B18-komet-ui/signature-x86_64.txt"
+      },
+      {
+        "name": "verification-provenance.json",
+        "bytes": 730,
+        "sha256": "8e91f68f03299d09c961bc8644ec089176e9e096296a2536747957143f72230c",
+        "url": "https://github.com/Lubara7/MAXGRAM-CLIENT/releases/download/v0.4.0-dev.3%2B18-komet-ui/verification-provenance.json"
+      }
+    ]
+  },
+  "integration": {
+    "pullRequest": "https://github.com/Lubara7/MAXGRAM-CLIENT/pull/8",
+    "merged": true,
+    "mergeCommit": "f8d95ed6f6b89426ed0955970b6e576e4889e16b",
+    "defaultBranch": "main"
+  }
+}
