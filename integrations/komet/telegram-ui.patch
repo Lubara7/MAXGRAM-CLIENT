@@ -1304,7 +1304,7 @@ index 73dcaf8..e389870 100644
                locale: _locale,
                themeMode: _effectiveThemeMode,
 diff --git a/pubspec.yaml b/pubspec.yaml
-index 78c1dc2..4b2c0d4 100644
+index 78c1dc2..f58ea00 100644
 --- a/pubspec.yaml
 +++ b/pubspec.yaml
 @@ -1,5 +1,5 @@
@@ -1319,7 +1319,7 @@ index 78c1dc2..4b2c0d4 100644
  # In Windows, build-name is used as the major, minor, and patch parts
  # of the product and file versions while build-number is used as the build suffix.
 -version: 0.5.19+19
-+version: 0.4.0-dev.1+16
++version: 0.4.0-dev.2+17
  
  environment:
    sdk: ^3.10.4

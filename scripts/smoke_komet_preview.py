@@ -28,9 +28,17 @@ def label(node):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--apk', type=Path, required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument('--apk', type=Path)
+    source.add_argument('--artifacts', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
+    if args.artifacts is not None:
+        provenance = json.loads((args.artifacts / 'build-provenance.json').read_text())
+        artifact = next(item for item in provenance['artifacts'] if item['abi'] == 'x86_64')
+        args.apk = args.artifacts / artifact['name']
+        if hashlib.sha256(args.apk.read_bytes()).hexdigest() != artifact['sha256']:
+            raise RuntimeError('Emulator APK hash does not match build provenance')
     output = args.output
     output.mkdir(parents=True, exist_ok=True)
     adb('wait-for-device')
@@ -61,6 +69,12 @@ def main():
                 break
         if not disclaimer or not login:
             raise RuntimeError('The disclaimer and phone login were not both observed')
+        labels = [label(node).strip() for node in nodes]
+        country = any('🇷🇺' in text or 'Россия' in text or 'Russian Federation' in text for text in labels)
+        help_button = any(text in {'Help', 'Помощь'} for text in labels)
+        language_button = any(text in {'Language', 'Язык'} for text in labels)
+        if not country or not help_button or not language_button:
+            raise RuntimeError('The default country or login toolbar controls were not observed')
         process = adb('shell', 'pidof', PACKAGE).strip()
         if not process:
             raise RuntimeError('Preview process is not running')
@@ -69,6 +83,9 @@ def main():
             'apkSha256': hashlib.sha256(args.apk.read_bytes()).hexdigest(),
             'disclaimerObserved': disclaimer,
             'phoneLoginObserved': login,
+            'defaultRussiaObserved': country,
+            'helpControlObserved': help_button,
+            'languageControlObserved': language_button,
             'realAccountLoginAttempted': False,
         }
         (output / 'startup.json').write_text(json.dumps(result, indent=2) + '\n')

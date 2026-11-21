@@ -28,7 +28,7 @@ void main() {
   );
 
   test(
-    'server restrictions are respected without fallback to an unavailable country',
+    'a catalog subset retains its order and excludes unrelated countries',
     () {
       final supported = allCountries.where(
         (c) => {'KZ', 'AZ', 'DE'}.contains(c.code),

@@ -47,8 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool get _ru => MaxgramLabels.ru(context);
   String _text(String ru, String en) => _ru ? ru : en;
-  List<CountryName> get _countries =>
-      maxgramLoginCountries(_api.registrationCountries);
+  List<CountryName> get _countries => maxgramLoginCountries(allCountries);
   bool get _valid =>
       _country != null &&
       _phone.text.replaceAll(RegExp(r'\D'), '').length == _country!.phoneDigits;
@@ -327,6 +326,13 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(
         backgroundColor: cs.surface,
         foregroundColor: cs.onSurfaceVariant,
+        iconTheme: IconThemeData(color: cs.onSurfaceVariant, size: 24),
+        actionsIconTheme: IconThemeData(color: cs.onSurfaceVariant, size: 24),
+        systemOverlayStyle:
+            (theme.brightness == Brightness.dark
+                    ? SystemUiOverlayStyle.light
+                    : SystemUiOverlayStyle.dark)
+                .copyWith(statusBarColor: Colors.transparent),
         automaticallyImplyLeading: false,
         leading: Navigator.canPop(context) || widget.returnToAccountId != null
             ? IconButton(
@@ -389,10 +395,9 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    country?.displayName(
-                          Localizations.localeOf(context).languageCode,
-                        ) ??
-                        _text('Нет доступных стран', 'No countries available'),
+                    country == null
+                        ? _text('Нет доступных стран', 'No countries available')
+                        : '${String.fromCharCodes(country.code.codeUnits.map((unit) => unit + 127397))} ${country.displayName(Localizations.localeOf(context).languageCode)}',
                     style: const TextStyle(fontSize: 16),
                   ),
                 ),
@@ -412,6 +417,7 @@ class _LoginScreenState extends State<LoginScreen> {
               if (country != null) PhoneInputFormatter(country),
             ],
             decoration: InputDecoration(
+              floatingLabelBehavior: FloatingLabelBehavior.always,
               labelText: _text('Номер телефона', 'Phone number'),
               prefixText: '${country?.phoneCode ?? ''}  ',
               hintText: country?.phoneMask.replaceAll('#', '0'),

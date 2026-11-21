@@ -47,8 +47,8 @@ const maxgramCountryOrder = [
   'ZA',
 ];
 
-List<CountryName> maxgramLoginCountries(Iterable<CountryName> supported) {
-  final available = {for (final country in supported) country.code: country};
+List<CountryName> maxgramLoginCountries(Iterable<CountryName> catalog) {
+  final available = {for (final country in catalog) country.code: country};
   return [
     for (final code in maxgramCountryOrder)
       if (available[code] case final CountryName country)

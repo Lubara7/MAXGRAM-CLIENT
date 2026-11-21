@@ -41,6 +41,8 @@ def prepare(source, target):
     run('git', 'apply', patch, cwd=target)
     shutil.copytree(INTEGRATION / 'lib', target / 'lib', dirs_exist_ok=True)
     shutil.copytree(INTEGRATION / 'test', target / 'test', dirs_exist_ok=True)
+    if f"version: {lock['version']}" not in (target / 'pubspec.yaml').read_text().splitlines():
+        raise RuntimeError('Prepared application version does not match the lock')
     after = fingerprints(target)
     changed = {path for path in before.keys() | after.keys() if before.get(path) != after.get(path)}
     reviewed = lock.get('backendFixes', {})

@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:komet/backend/api.dart';
 import 'package:komet/backend/modules/account.dart';
+import 'package:komet/core/config/countries.dart';
 import 'package:komet/frontend/screens/auth/login_screen.dart';
 import 'package:komet/l10n/app_localizations.dart';
 import 'package:komet/maxgram/maxgram_theme.dart';
@@ -11,6 +12,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 class LoginApi extends Api {
   @override
   SessionState get state => SessionState.online;
+
+  @override
+  List<CountryName> get registrationCountries => [countriesByCode['AZ']!];
 }
 
 void main() {
@@ -63,8 +67,14 @@ void main() {
         120,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.byType(TextField));
+      await Scrollable.ensureVisible(
+        tester.element(find.byType(TextField)),
+        alignment: 0.5,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.byType(TextField));
+      await tester.pump();
+      expect(tester.testTextInput.hasAnyClients, isTrue);
       await tester.enterText(find.byType(TextField), '0000000000');
       await tester.pump();
       expect(tester.takeException(), isNull);
@@ -89,6 +99,40 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'registration hints cannot replace the existing-account country list',
+    (tester) async {
+      await showLogin(tester);
+      expect(find.text('🇷🇺 Россия'), findsOneWidget);
+      final prefix = tester
+          .widget<TextField>(find.byType(TextField))
+          .decoration
+          ?.prefixText;
+      expect(prefix?.trim(), '+7');
+    },
+  );
+
+  testWidgets(
+    'help and language icons retain visible contrast on the white app bar',
+    (tester) async {
+      await showLogin(tester);
+      for (final glyph in [Icons.help_outline, Icons.language]) {
+        final finder = find.byIcon(glyph);
+        final icon = tester.widget<Icon>(finder);
+        final color = icon.color ?? IconTheme.of(tester.element(finder)).color!;
+        final background = tester
+            .widget<AppBar>(find.byType(AppBar))
+            .backgroundColor!;
+        final light = background.computeLuminance();
+        final dark = color.computeLuminance();
+        final contrast = (light > dark
+            ? (light + 0.05) / (dark + 0.05)
+            : (dark + 0.05) / (light + 0.05));
+        expect(contrast, greaterThanOrEqualTo(3));
+      }
+    },
+  );
 
   testWidgets(
     'first use displays the disclaimer before a code can be requested',

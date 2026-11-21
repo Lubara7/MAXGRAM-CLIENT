@@ -19,7 +19,7 @@ env:
   FLUTTER_SUPPRESS_ANALYTICS: 'true'
   CARGO_BUILD_JOBS: '2'
   PREVIEW_KEYSTORE: /tmp/maxgram-signing/preview.keystore
-  PREVIEW_TAG: v0.4.0-dev.1-komet-ui
+  PREVIEW_TAG: v0.4.0-dev.2-komet-ui
 
 jobs:
   build:
@@ -38,6 +38,7 @@ jobs:
         with:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v6
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.44.3'
@@ -57,6 +58,14 @@ jobs:
           flutter pub get
           flutter analyze --no-pub --no-fatal-infos lib test
           flutter test --no-pub
+      - uses: actions/cache@v4
+        with:
+          key: komet-native-${{ runner.os }}-7bbb73b-ndk28-arm64-x64-v1
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            build/komet-client/build/komet_crypto
+            build/komet-client/build/kolibri
       - name: Install native Android toolchain
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
       - uses: actions/cache/restore@v4
@@ -124,7 +133,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          script: python3 scripts/smoke_komet_preview.py --apk dist/MAXGRAM-CLIENT-0.4.0-dev.1-komet-ui-x86_64.apk --output smoke-evidence
+          script: python3 scripts/smoke_komet_preview.py --artifacts dist --output smoke-evidence
       - uses: actions/upload-artifact@v6
         if: always()
         with:
@@ -153,6 +162,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           zip -r dist/android-startup-evidence.zip smoke-evidence
-          gh release create "$PREVIEW_TAG" --draft --prerelease --target "$GITHUB_SHA" --title 'MAXGRAM CLIENT 0.4.0-dev.1 — Komet preview' --notes-file docs/komet-preview-release.md
+          gh release create "$PREVIEW_TAG" --draft --prerelease --target "$GITHUB_SHA" --title "MAXGRAM CLIENT $PREVIEW_TAG — Komet preview" --notes-file docs/komet-preview-release.md
           gh release upload "$PREVIEW_TAG" dist/*
           gh release edit "$PREVIEW_TAG" --draft=false --prerelease --latest=false
