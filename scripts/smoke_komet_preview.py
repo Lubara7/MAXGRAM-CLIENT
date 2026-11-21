@@ -49,6 +49,8 @@ def check_keyboard(tree, output):
             nodes = list(keyboard_tree.iter('node'))
             next_button = next((node for node in nodes if label(node).strip() in {'Continue', 'Продолжить'}), None)
             windows = adb('shell', 'dumpsys', 'window', 'windows')
+            (output / 'window-keyboard.txt').write_text(windows)
+            (output / 'input-method.txt').write_text(adb('shell', 'dumpsys', 'input_method'))
             ime_top = None
             for line in windows.splitlines():
                 if not ('ITYPE_IME' in line or 'type=ime' in line) or 'visible=true' not in line.lower():
@@ -73,7 +75,7 @@ def check_keyboard(tree, output):
             if next_button is not None and ime_top is not None and ime_top > 0:
                 button_bottom = bounds(next_button)[3]
                 if button_bottom > ime_top:
-                    raise RuntimeError('Continue is covered by the software keyboard')
+                    raise RuntimeError(f'Continue is covered by the software keyboard: buttonBottom={button_bottom}, keyboardTop={ime_top}')
                 return {'keyboardTop': ime_top, 'continueBottom': button_bottom, 'continueAboveKeyboard': True}
         raise RuntimeError('Could not verify the continue button with the keyboard open')
     finally:
