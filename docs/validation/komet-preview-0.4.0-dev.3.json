@@ -10,12 +10,13 @@
   "verificationSourceCommit": "4fd3cd46d558bd869a9fc196f0b86a4dec591931",
   "verificationRun": "https://github.com/Lubara7/MAXGRAM-CLIENT/actions/runs/44928797893",
   "sourceAnalysis": {
-    "run": "https://github.com/Lubara7/MAXGRAM-CLIENT/actions/runs/44928133218",
+    "run": "https://github.com/Lubara7/MAXGRAM-CLIENT/actions/runs/44928797916",
     "errors": 0,
     "warnings": 0,
     "informationalFindings": 29,
     "testsPassed": 392,
-    "testsSkipped": 3
+    "testsSkipped": 3,
+    "sourceCommit": "4fd3cd46d558bd869a9fc196f0b86a4dec591931"
   },
   "evidenceParserRegressionTests": {
     "passed": 5,
@@ -96,7 +97,7 @@
     "backgroundFcmConfigured": false,
     "legacyNativeDatabaseMigrationImplemented": false
   },
-  "recordedAt": "2026-11-21T17:16:25.343Z",
+  "recordedAt": "2026-11-21T17:18:05.931Z",
   "release": {
     "url": "https://github.com/Lubara7/MAXGRAM-CLIENT/releases/tag/v0.4.0-dev.3%2B18-komet-ui",
     "tag": "v0.4.0-dev.3+18-komet-ui",
@@ -178,5 +179,17 @@
     "merged": true,
     "mergeCommit": "f8d95ed6f6b89426ed0955970b6e576e4889e16b",
     "defaultBranch": "main"
+  },
+  "legacyValidation": {
+    "run": "https://github.com/Lubara7/MAXGRAM-CLIENT/actions/runs/44928797883",
+    "status": "passed",
+    "checks": [
+      "unit tests",
+      "Android lint",
+      "both backend compilations",
+      "device-test compilation",
+      "release acceptance gate",
+      "137 pinned Telegram API classes"
+    ]
   }
 }
