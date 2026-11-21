@@ -51,6 +51,21 @@ List<CountryName> maxgramLoginCountries(Iterable<CountryName> supported) {
   final available = {for (final country in supported) country.code: country};
   return [
     for (final code in maxgramCountryOrder)
-      if (available[code] case final CountryName country) country,
+      if (available[code] case final CountryName country)
+        _normalizeDialCode(country),
   ];
+}
+
+CountryName _normalizeDialCode(CountryName country) {
+  if (country.code != 'GD' && country.code != 'KN') return country;
+  return CountryName(
+    code: country.code,
+    en: country.en,
+    ru: country.ru,
+    phoneCode: '+1',
+    phoneDigits: 10,
+    phoneMask: '### ### ####',
+    phoneGroupSizes: const [3, 3, 4],
+    phoneGroupSeparators: const ['', ' ', ' ', ''],
+  );
 }

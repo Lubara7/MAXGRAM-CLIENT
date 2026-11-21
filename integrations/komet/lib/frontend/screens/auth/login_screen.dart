@@ -11,6 +11,7 @@ import '../../../maxgram/login_countries.dart';
 import '../../../maxgram/maxgram_navigation.dart';
 import '../../widgets/adaptive_shell.dart';
 import '../../widgets/custom_notification.dart';
+import '../digital_id/digital_id_web_screen.dart';
 import 'code_confirmation_screen.dart';
 import 'phone_input_formatter.dart';
 import 'select_country_screen.dart';

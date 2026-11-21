@@ -13,6 +13,16 @@ void main() {
         'KZ',
       ]);
       expect(countries.last.code, 'ZA');
+      expect(countries.where((c) => c.phoneCode == '+1').map((c) => c.code), [
+        'GD',
+        'KN',
+      ]);
+      expect(
+        countries
+            .where((c) => c.phoneCode == '+1')
+            .every((c) => c.phoneDigits == 10),
+        isTrue,
+      );
       expect(countries.any((c) => c.code == 'DE'), isFalse);
     },
   );
