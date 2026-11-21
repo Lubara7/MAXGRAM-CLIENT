@@ -1,0 +1,39 @@
+name: Inspect Komet Android evidence
+
+on:
+  push:
+    branches: [komet-telegram-ui]
+    paths: ['.github/workflows/komet-evidence.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  inspect:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[inspect-komet]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Read saved emulator evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 44924690580 --name komet-preview-startup --dir evidence
+          python3 - <<'PY'
+          import base64,json
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          for name in ['phone-keyboard.png','login.png']:
+              path=Path('evidence')/name
+              if path.exists(): print('MAXGRAM_IMAGE:'+name+':'+base64.b64encode(path.read_bytes()).decode())
+          root=ET.parse('evidence/screen.xml').getroot()
+          for node in root.iter('node'):
+              text=node.get('text','')+' '+node.get('content-desc','')
+              if 'Continue' in text or '000' in text or node.get('class')=='android.widget.EditText' or 'inputmethod' in node.get('package',''):
+                  print('MAXGRAM_NODE:'+json.dumps(dict(node.attrib),ensure_ascii=False))
+          PY
