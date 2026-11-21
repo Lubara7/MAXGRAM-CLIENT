@@ -1,0 +1,158 @@
+name: Build Komet preview APK
+
+on:
+  push:
+    branches: [komet-telegram-ui]
+    paths:
+      - '.github/workflows/komet-apk.yml'
+      - 'integrations/komet/**'
+      - 'scripts/prepare_komet_client.py'
+      - 'scripts/package_komet_preview.py'
+      - 'scripts/smoke_komet_preview.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CI: 'true'
+  FLUTTER_SUPPRESS_ANALYTICS: 'true'
+  CARGO_BUILD_JOBS: '2'
+  PREVIEW_KEYSTORE: /tmp/maxgram-signing/preview.keystore
+  PREVIEW_TAG: v0.4.0-dev.1-komet-ui
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[komet-apk]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          cache: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,x86_64-linux-android
+      - name: Prepare pinned source
+        run: |
+          git submodule update --init upstream/komet-ui
+          python3 scripts/prepare_komet_client.py
+          git -C build/komet-client submodule update --init --recursive third_party/rlottie
+      - name: Resolve and check application
+        working-directory: build/komet-client
+        run: |
+          flutter pub get
+          flutter analyze --no-pub --no-fatal-infos lib test
+          flutter test --no-pub
+      - name: Install native Android toolchain
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
+      - uses: actions/cache/restore@v4
+        id: signing
+        with:
+          path: ${{ env.PREVIEW_KEYSTORE }}
+          key: maxgram-komet-preview-signing-v1
+      - name: Configure preview signing
+        run: |
+          mkdir -p /tmp/maxgram-signing
+          if [ ! -s "$PREVIEW_KEYSTORE" ]; then
+            keytool -genkeypair -keystore "$PREVIEW_KEYSTORE" -storetype PKCS12 -alias androiddebugkey -storepass android -keypass android -dname 'CN=MaxGram Preview,O=MaxGram,C=US' -keyalg RSA -keysize 2048 -validity 10000
+          fi
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          Path('build/komet-client/android/key.properties').write_text('storePassword=android\nkeyPassword=android\nkeyAlias=androiddebugkey\nstoreFile=' + os.environ['PREVIEW_KEYSTORE'] + '\n')
+          Path('build/komet-client/android/gradle.properties').open('a').write('\norg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g\nkotlin.daemon.jvmargs=-Xmx1g\norg.gradle.workers.max=2\n')
+          PY
+      - uses: actions/cache/save@v4
+        if: steps.signing.outputs.cache-hit != 'true'
+        with:
+          path: ${{ env.PREVIEW_KEYSTORE }}
+          key: maxgram-komet-preview-signing-v1
+      - name: Build ARM64 and emulator APKs
+        working-directory: build/komet-client
+        run: flutter build apk --release --flavor maxgram --split-per-abi --target-platform android-arm64,android-x64
+      - name: Package and verify
+        run: python3 scripts/package_komet_preview.py --client build/komet-client --output dist
+      - uses: actions/upload-artifact@v6
+        with:
+          name: komet-preview-files
+          path: dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: komet-build-diagnostics
+          path: |
+            build/komet-client/maxgram-preparation.json
+            build/komet-client/build/reports/
+            build/komet-client/android/.gradle/**/reports/
+
+  smoke:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v6
+        with:
+          name: komet-preview-files
+          path: dist
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: python3 scripts/smoke_komet_preview.py --apk dist/MAXGRAM-CLIENT-0.4.0-dev.1-komet-ui-x86_64.apk --output smoke-evidence
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: komet-preview-startup
+          path: smoke-evidence/
+
+  publish:
+    needs: [build, smoke]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v6
+        with:
+          name: komet-preview-files
+          path: dist
+      - uses: actions/download-artifact@v6
+        with:
+          name: komet-preview-startup
+          path: smoke-evidence
+      - name: Publish explicitly requested experimental APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip -r dist/android-startup-evidence.zip smoke-evidence
+          gh release create "$PREVIEW_TAG" --draft --prerelease --target "$GITHUB_SHA" --title 'MAXGRAM CLIENT 0.4.0-dev.1 — Komet preview' --notes-file docs/komet-preview-release.md
+          gh release upload "$PREVIEW_TAG" dist/*
+          gh release edit "$PREVIEW_TAG" --draft=false --prerelease --latest=false
