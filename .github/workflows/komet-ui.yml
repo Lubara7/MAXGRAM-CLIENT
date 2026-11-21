@@ -1,0 +1,58 @@
+name: Komet UI migration
+
+on:
+  push:
+    branches: [komet-telegram-ui]
+    paths:
+      - '.github/workflows/komet-ui.yml'
+      - '.gitmodules'
+      - 'upstream/komet-ui'
+      - 'integrations/komet/**'
+      - 'scripts/prepare_komet_client.py'
+  pull_request:
+    paths:
+      - '.github/workflows/komet-ui.yml'
+      - 'upstream/komet-ui'
+      - 'integrations/komet/**'
+      - 'scripts/prepare_komet_client.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CI: 'true'
+  FLUTTER_SUPPRESS_ANALYTICS: 'true'
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned Komet source
+        run: git submodule update --init upstream/komet-ui
+      - name: Prepare Telegram presentation
+        run: python3 scripts/prepare_komet_client.py
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        working-directory: build/komet-client
+        run: flutter pub get
+      - name: Analyze integration
+        working-directory: build/komet-client
+        run: flutter analyze --no-pub --no-fatal-infos lib test
+      - name: Check application behavior
+        working-directory: build/komet-client
+        run: flutter test --no-pub
+      - name: Upload preparation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: komet-ui-preparation
+          path: build/komet-client/maxgram-preparation.json

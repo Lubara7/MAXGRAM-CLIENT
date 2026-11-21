@@ -1,0 +1,1306 @@
+diff --git a/android/app/build.gradle.kts b/android/app/build.gradle.kts
+index 169f484..a6e0991 100644
+--- a/android/app/build.gradle.kts
++++ b/android/app/build.gradle.kts
+@@ -6,7 +6,11 @@ plugins {
+     id("kotlin-android")
+     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+     id("dev.flutter.flutter-gradle-plugin")
+-    id("com.google.gms.google-services")
++    id("com.google.gms.google-services") apply false
++}
++
++if (file("src/maxgram/google-services.json").exists()) {
++    apply(plugin = "com.google.gms.google-services")
+ }
+ 
+ val keystoreProperties = Properties()
+@@ -32,7 +36,7 @@ android {
+     }
+ 
+     defaultConfig {
+-        applicationId = "ru.komet.app"
++        applicationId = "io.github.lubara7.maxgram.preview"
+         minSdk = maxOf(flutter.minSdkVersion, 23)
+         targetSdk = flutter.targetSdkVersion
+         versionCode = flutter.versionCode
+@@ -54,14 +58,10 @@ android {
+     flavorDimensions += "distribution"
+ 
+     productFlavors {
+-        create("komet") {
++        create("maxgram") {
+             dimension = "distribution"
+             isDefault = true
+-            applicationId = "ru.komet.app"
+-        }
+-        create("oneme") {
+-            dimension = "distribution"
+-            applicationId = "ru.oneme.app"
++            applicationId = "io.github.lubara7.maxgram.preview"
+         }
+     }
+ 
+diff --git a/android/app/src/main/AndroidManifest.xml b/android/app/src/main/AndroidManifest.xml
+index 0501773..3b48ee7 100644
+--- a/android/app/src/main/AndroidManifest.xml
++++ b/android/app/src/main/AndroidManifest.xml
+@@ -33,7 +33,7 @@
+     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>
+     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false"/>
+     <application
+-        android:label="Komet"
++        android:label="MAXGRAM"
+         android:name="${applicationName}"
+         android:enableOnBackInvokedCallback="true"
+         android:icon="@mipmap/ic_launcher">
+@@ -41,7 +41,7 @@
+             android:name="ru.komet.app.MainActivity"
+             android:exported="true"
+             android:icon="@mipmap/ic_launcher"
+-            android:label="Komet"
++            android:label="MAXGRAM"
+             android:launchMode="singleTop"
+             android:taskAffinity=""
+             android:theme="@style/LaunchTheme"
+@@ -108,7 +108,7 @@
+             android:enabled="false"
+             android:exported="true"
+             android:icon="@mipmap/ic_launcher_minimal"
+-            android:label="Komet"
++            android:label="MAXGRAM"
+             android:targetActivity="ru.komet.app.MainActivity">
+             <intent-filter>
+                 <action android:name="android.intent.action.MAIN"/>
+diff --git a/lib/backend/modules/messages.dart b/lib/backend/modules/messages.dart
+index 14c01d0..b43991b 100644
+--- a/lib/backend/modules/messages.dart
++++ b/lib/backend/modules/messages.dart
+@@ -713,13 +713,22 @@ class MessagesModule {
+ 
+     final response = await _api.sendRequest(Opcode.chatHistory, payload);
+ 
+-    if (!response.isOk) return [];
++    throwIfPacketError(response);
++    if (!response.isOk) {
++      throw const PacketError('Не удалось загрузить историю сообщений');
++    }
+ 
+     final data = response.payload;
+-    if (data is! Map) return [];
++    if (data is! Map) {
++      throw const FormatException('Invalid message history response');
++    }
+ 
+     final messagesData = data['messages'];
+-    if (messagesData is! List) return [];
++    if (messagesData is! List) {
++      throw const FormatException(
++        'Message history is missing its message list',
++      );
++    }
+ 
+     final List<CachedMessage> results = [];
+ 
+diff --git a/lib/core/config/app_chat_chrome.dart b/lib/core/config/app_chat_chrome.dart
+index 677380c..5e55fcf 100644
+--- a/lib/core/config/app_chat_chrome.dart
++++ b/lib/core/config/app_chat_chrome.dart
+@@ -15,7 +15,7 @@ class AppChatChrome {
+ 
+   static final _setting = PersistedEnum<ChatChromeStyle>(
+     prefKey: prefKey,
+-    defaultValue: ChatChromeStyle.none,
++    defaultValue: ChatChromeStyle.color,
+     encode: _encode,
+     decode: _parse,
+   );
+@@ -23,7 +23,7 @@ class AppChatChrome {
+   static ValueNotifier<ChatChromeStyle> get current => _setting.current;
+ 
+   static ChatChromeStyle _parse(String? value) =>
+-      enumFromName(ChatChromeStyle.values, value, ChatChromeStyle.none);
++      enumFromName(ChatChromeStyle.values, value, ChatChromeStyle.color);
+ 
+   static String _encode(ChatChromeStyle value) => value.name;
+ 
+diff --git a/lib/core/config/app_fonts.dart b/lib/core/config/app_fonts.dart
+index 624468f..a372a19 100644
+--- a/lib/core/config/app_fonts.dart
++++ b/lib/core/config/app_fonts.dart
+@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
+ 
+ import 'custom_font_service.dart';
+ 
+-const String kDisplayFontFamily = 'Outfit';
++const String kDisplayFontFamily = 'Roboto';
+ 
+ @immutable
+ class AppDisplayFont extends ThemeExtension<AppDisplayFont> {
+diff --git a/lib/core/utils/update_checker.dart b/lib/core/utils/update_checker.dart
+index 6501979..9edd9f2 100644
+--- a/lib/core/utils/update_checker.dart
++++ b/lib/core/utils/update_checker.dart
+@@ -39,9 +39,9 @@ class UpdateCheckResult {
+ }
+ 
+ abstract class UpdateChecker {
+-  static const String _owner = 'KometTeam';
+-  static const String _repo = 'Komet';
+-  static const String _userAgent = 'KometUpdateChecker';
++  static const String _owner = 'Lubara7';
++  static const String _repo = 'MAXGRAM-CLIENT';
++  static const String _userAgent = 'MaxgramUpdateChecker';
+ 
+   static const String _lastCheckKey = 'update_last_check_ms';
+   static const String _skippedTagKey = 'update_skipped_tag';
+@@ -164,6 +164,9 @@ abstract class UpdateChecker {
+       for (final entry in decoded) {
+         if (entry is! Map) continue;
+         if (entry['draft'] == true) continue;
++        if (!(entry['tag_name']?.toString().endsWith('-komet-ui') ?? false)) {
++          continue;
++        }
+         return entry.cast<String, dynamic>();
+       }
+       return null;
+diff --git a/lib/frontend/screens/auth/code_confirmation_screen.dart b/lib/frontend/screens/auth/code_confirmation_screen.dart
+index 03912ba..c141f7e 100644
+--- a/lib/frontend/screens/auth/code_confirmation_screen.dart
++++ b/lib/frontend/screens/auth/code_confirmation_screen.dart
+@@ -1,4 +1,5 @@
+ import 'dart:async';
++import '../../../maxgram/otp_challenge.dart';
+ import 'package:flutter/material.dart';
+ import 'package:komet/l10n/app_localizations.dart';
+ import 'package:flutter/services.dart';
+@@ -35,7 +36,7 @@ class _CodeConfirmationScreenState extends State<CodeConfirmationScreen>
+   final TextEditingController _codeController = TextEditingController();
+   final FocusNode _focusNode = FocusNode();
+   final SmsCodeListener _smsListener = SmsCodeListener();
+-  int _timerSeconds = 30;
++  int get _timerSeconds => _challenge.remainingSeconds;
+   Timer? _timer;
+   Timer? _errorTimer;
+ 
+@@ -47,7 +48,8 @@ class _CodeConfirmationScreenState extends State<CodeConfirmationScreen>
+   Animation<double>? _routeAnimation;
+   AnimationStatusListener? _routeAnimationListener;
+ 
+-  late String _token;
++  late final MaxgramOtpChallenge _challenge;
++  String get _token => _challenge.token;
+   bool _verifying = false;
+ 
+   @override
+@@ -57,7 +59,17 @@ class _CodeConfirmationScreenState extends State<CodeConfirmationScreen>
+   @override
+   void initState() {
+     super.initState();
+-    _token = widget.token;
++    _challenge = MaxgramOtpChallenge(
++      token: widget.token,
++      requestNewCode: () async {
++        final result = await accountModule.resendCode(
++          widget.rawPhone,
++          language: Localizations.localeOf(context).languageCode,
++        );
++        return result.token;
++      },
++    );
++    _challenge.addListener(_challengeChanged);
+     startSessionRecovery();
+     _startTimer();
+     _listenForSmsCode();
+@@ -88,6 +100,7 @@ class _CodeConfirmationScreenState extends State<CodeConfirmationScreen>
+       _routeAnimation?.removeStatusListener(_routeAnimationListener!);
+     }
+     _smsListener.dispose();
++    _challenge.dispose();
+     stopSessionRecovery();
+     _timer?.cancel();
+     _errorTimer?.cancel();
+@@ -119,7 +132,7 @@ class _CodeConfirmationScreenState extends State<CodeConfirmationScreen>
+       final fresh = await accountModule.requestCode(widget.rawPhone);
+       if (!mounted) return;
+       setState(() {
+-        _token = fresh.token;
++        _challenge.replaceToken(fresh.token);
+         sessionEpoch = api.sessionEpoch;
+         dropNotified = false;
+         _codeController.clear();
+@@ -172,18 +185,16 @@ class _CodeConfirmationScreenState extends State<CodeConfirmationScreen>
+ 
+   void _startTimer() {
+     _timer?.cancel();
+-    _timerSeconds = 30;
+     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+-      setState(() {
+-        if (_timerSeconds > 0) {
+-          _timerSeconds--;
+-        } else {
+-          _timer?.cancel();
+-        }
+-      });
++      if (!mounted || _timerSeconds == 0) timer.cancel();
++      if (mounted) setState(() {});
+     });
+   }
+ 
++  void _challengeChanged() {
++    if (mounted) setState(() {});
++  }
++
+   Future<void> _listenForSmsCode() async {
+     await _smsListener.start((code) {
+       if (!mounted) return;
+@@ -192,7 +203,7 @@ class _CodeConfirmationScreenState extends State<CodeConfirmationScreen>
+   }
+ 
+   void _applyAutoCode(String code) {
+-    if (_verifying || recovering) return;
++    if (_verifying || recovering || _challenge.isResending) return;
+     if (_codeController.text == code) return;
+     _codeController.text = code;
+     _codeController.selection = TextSelection.collapsed(offset: code.length);
+@@ -210,14 +221,30 @@ class _CodeConfirmationScreenState extends State<CodeConfirmationScreen>
+     });
+   }
+ 
+-  void _resendCode() {
+-    if (_timerSeconds == 0) {
++  Future<void> _resendCode() async {
++    if (recovering || _verifying || _challenge.isResending) return;
++    if (sessionStale) {
++      await recoverStaleSession();
++      return;
++    }
++    try {
++      final sent = await _challenge.resend();
++      if (!mounted || !sent) return;
++      _codeController.clear();
++      _errorMessage = null;
+       _startTimer();
++      _listenForSmsCode();
++    } catch (error) {
++      if (mounted) _showError(error.toString());
+     }
+   }
+ 
+   Future<void> _verifyCode() async {
+-    if (_codeController.text.length != 6 || recovering || _verifying) return;
++    if (_codeController.text.length != 6 ||
++        recovering ||
++        _verifying ||
++        _challenge.isResending)
++      return;
+ 
+     if (sessionStale) {
+       recoverStaleSession();
+@@ -482,7 +509,13 @@ class _CodeConfirmationScreenState extends State<CodeConfirmationScreen>
+                     : const SizedBox.shrink(),
+               ),
+               GestureDetector(
+-                onTap: _resendCode,
++                onTap:
++                    (recovering ||
++                        _verifying ||
++                        _challenge.isResending ||
++                        _timerSeconds > 0)
++                    ? null
++                    : _resendCode,
+                 child: AnimatedDefaultTextStyle(
+                   duration: const Duration(milliseconds: 200),
+                   style: TextStyle(
+diff --git a/lib/frontend/screens/auth/select_country_screen.dart b/lib/frontend/screens/auth/select_country_screen.dart
+index a32ba21..af1029c 100644
+--- a/lib/frontend/screens/auth/select_country_screen.dart
++++ b/lib/frontend/screens/auth/select_country_screen.dart
+@@ -6,11 +6,13 @@ import 'package:komet/l10n/app_localizations.dart';
+ class SelectCountryScreen extends StatefulWidget {
+   final CountryName selectedCountry;
+   final List<CountryName> countries;
++  final bool preserveOrder;
+ 
+   SelectCountryScreen({
+     super.key,
+     required this.selectedCountry,
+     List<CountryName>? countries,
++    this.preserveOrder = false,
+   }) : countries = countries ?? allCountries;
+ 
+   @override
+@@ -39,7 +41,9 @@ class _SelectCountryScreenState extends State<SelectCountryScreen> {
+     final lang = Localizations.localeOf(context).languageCode;
+     if (lang == _lang) return;
+     _lang = lang;
+-    _sortedCountries = sortedByDisplayName(widget.countries, lang);
++    _sortedCountries = widget.preserveOrder
++        ? List.of(widget.countries)
++        : sortedByDisplayName(widget.countries, lang);
+     _searchEntries = _sortedCountries
+         .map(
+           (c) => _CountrySearchEntry(c, c.ru.toLowerCase(), c.en.toLowerCase()),
+diff --git a/lib/frontend/screens/calls/calls_tab.dart b/lib/frontend/screens/calls/calls_tab.dart
+index 68f92b5..1567dd7 100644
+--- a/lib/frontend/screens/calls/calls_tab.dart
++++ b/lib/frontend/screens/calls/calls_tab.dart
+@@ -1,6 +1,7 @@
+ import 'dart:async';
+ 
+ import 'package:flutter/material.dart';
++import '../../../maxgram/maxgram_navigation.dart';
+ import 'package:material_symbols_icons/symbols.dart';
+ import '../../../main.dart' show api, accountModule;
+ import '../../../backend/modules/account.dart';
+@@ -23,7 +24,9 @@ import 'call_screen.dart';
+ import '../../../core/config/app_fonts.dart';
+ 
+ class CallsTab extends StatefulWidget {
+-  const CallsTab({super.key});
++  const CallsTab({super.key, this.standalone = false});
++
++  final bool standalone;
+ 
+   @override
+   State<CallsTab> createState() => _CallsTabState();
+@@ -474,30 +477,34 @@ class _CallsTabState extends State<CallsTab>
+         : _calls;
+ 
+     return Scaffold(
++      appBar: widget.standalone
++          ? AppBar(title: Text(MaxgramLabels.calls(context)))
++          : null,
+       backgroundColor: spectrumSurfaceColor(cs),
+       body: SafeArea(
+         bottom: false,
+         child: Column(
+           crossAxisAlignment: CrossAxisAlignment.stretch,
+           children: [
+-            Padding(
+-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+-              child: Column(
+-                crossAxisAlignment: CrossAxisAlignment.start,
+-                children: [
+-                  Text(
+-                    'Звонки',
+-                    style: TextStyle(
+-                      color: cs.onSurface,
+-                      fontSize: 24,
+-                      fontWeight: FontWeight.w700,
+-                      fontFamily: displayFontOf(context),
++            if (!widget.standalone)
++              Padding(
++                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
++                child: Column(
++                  crossAxisAlignment: CrossAxisAlignment.start,
++                  children: [
++                    Text(
++                      'Звонки',
++                      style: TextStyle(
++                        color: cs.onSurface,
++                        fontSize: 24,
++                        fontWeight: FontWeight.w700,
++                        fontFamily: displayFontOf(context),
++                      ),
+                     ),
+-                  ),
+-                  const ConnectionStatusLine(),
+-                ],
++                    const ConnectionStatusLine(),
++                  ],
++                ),
+               ),
+-            ),
+             Padding(
+               padding: const EdgeInsets.symmetric(horizontal: 8),
+               child: Row(
+diff --git a/lib/frontend/screens/chats/chat/chat_controller.dart b/lib/frontend/screens/chats/chat/chat_controller.dart
+index 81270e1..c2e5dba 100644
+--- a/lib/frontend/screens/chats/chat/chat_controller.dart
++++ b/lib/frontend/screens/chats/chat/chat_controller.dart
+@@ -348,7 +348,9 @@ class ChatController extends ChangeNotifier {
+       onLoaded(added);
+     } catch (e) {
+       logger.e('Error loading more history: $e');
+-      onError(e);
++      if (isMounted()) onError(e);
++    } finally {
++      isLoadingMore = false;
+     }
+   }
+ 
+diff --git a/lib/frontend/screens/chats/chat_list_screen.dart b/lib/frontend/screens/chats/chat_list_screen.dart
+index 0dc2a4f..196b447 100644
+--- a/lib/frontend/screens/chats/chat_list_screen.dart
++++ b/lib/frontend/screens/chats/chat_list_screen.dart
+@@ -1,6 +1,9 @@
+ import 'dart:async';
+ import 'package:cached_network_image/cached_network_image.dart';
+ import 'package:flutter/material.dart';
++import 'package:flutter/foundation.dart';
++import '../../../maxgram/maxgram_navigation.dart';
++import '../../widgets/komet_avatar.dart';
+ import 'package:komet/backend/modules/messages.dart';
+ import 'package:material_symbols_icons/symbols.dart';
+ import 'dart:math';
+@@ -282,6 +285,94 @@ class _ChatListScreenState extends State<ChatListScreen>
+       DateTime.fromMillisecondsSinceEpoch(0);
+   ProfileData? _profile;
+ 
++  final _maxgramScaffoldKey = GlobalKey<ScaffoldState>();
++
++  bool get _maxgramMobile =>
++      defaultTargetPlatform == TargetPlatform.android &&
++      MediaQuery.sizeOf(context).width < 900 &&
++      !widget.forwardMode &&
++      !widget.archiveMode &&
++      !_shareMode;
++
++  void _openMaxgramDestination(MaxgramDestination destination) {
++    _maxgramScaffoldKey.currentState?.closeDrawer();
++    switch (destination) {
++      case MaxgramDestination.newGroup:
++        showCreateGroupFlow(context);
++      case MaxgramDestination.contacts:
++        pushSwipeable(context, (_) => const ContactsTab(standalone: true));
++      case MaxgramDestination.calls:
++        pushSwipeable(context, (_) => const CallsTab(standalone: true));
++      case MaxgramDestination.savedMessages:
++        _openSavedMessages();
++      case MaxgramDestination.settings:
++        pushSwipeable(context, (_) => const SettingsTab(standalone: true));
++      case MaxgramDestination.downloads:
++        unawaited(_openDownloads());
++    }
++  }
++
++  Widget _buildMaxgramHome(ColorScheme cs) {
++    final name = [
++      _profile?.firstName ?? '',
++      _profile?.lastName ?? '',
++    ].where((value) => value.isNotEmpty).join(' ');
++    return PopScope(
++      canPop: !_isFabOpen && !_isSelectionMode,
++      onPopInvokedWithResult: (didPop, result) {
++        if (didPop) return;
++        if (_isFabOpen) {
++          _toggleFab();
++        } else if (_isSelectionMode) {
++          _clearSelection();
++        }
++      },
++      child: Scaffold(
++        key: _maxgramScaffoldKey,
++        drawer: MaxgramDrawer(
++          name: name,
++          phone: (_profile?.phone ?? 0) == 0 ? '' : '+${_profile!.phone}',
++          avatar: KometAvatar(
++            name: name,
++            imageUrl: _profile?.baseUrl,
++            size: 64,
++          ),
++          onSelected: _openMaxgramDestination,
++        ),
++        body: SafeArea(
++          bottom: false,
++          child: Stack(
++            children: [
++              _getChatsBody(),
++              if (_isFabOpen) ...[
++                Positioned.fill(
++                  child: ModalBarrier(
++                    color: Colors.black.withValues(alpha: 0.2),
++                    dismissible: true,
++                    onDismiss: _toggleFab,
++                  ),
++                ),
++                Positioned(
++                  right: 16,
++                  bottom: MediaQuery.viewPaddingOf(context).bottom + 88,
++                  child: _buildFabMenu(),
++                ),
++              ],
++              _buildSelectionActionBar(cs),
++            ],
++          ),
++        ),
++        floatingActionButton: _isSelectionMode
++            ? null
++            : FloatingActionButton(
++                tooltip: MaxgramLabels.compose(context),
++                onPressed: _toggleFab,
++                child: Icon(_isFabOpen ? Icons.close : Icons.edit),
++              ),
++      ),
++    );
++  }
++
+   List<CachedChat> _chats = [];
+   int _archivedCount = 0;
+   int _archivedUnread = 0;
+@@ -1677,151 +1768,168 @@ class _ChatListScreenState extends State<ChatListScreen>
+                 duration: const Duration(milliseconds: 200),
+                 curve: Curves.easeOutCubic,
+                 alignment: Alignment.topCenter,
+-                child: _shouldCollapseSearch
++                child: _shouldCollapseSearch && !_maxgramMobile
+                     ? const SizedBox(width: double.infinity, height: 52)
+                     : Column(
+                         mainAxisSize: MainAxisSize.min,
+                         crossAxisAlignment: CrossAxisAlignment.stretch,
+                         children: [
+-                          Padding(
+-                            padding: const EdgeInsets.fromLTRB(20, 6, 20, 3),
+-                            child: Row(
+-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+-                              children: [
+-                                Expanded(
+-                                  child: Row(
+-                                    children: [
+-                                      if (_shareMode)
+-                                        Padding(
+-                                          padding: const EdgeInsets.only(
+-                                            right: 4,
+-                                          ),
+-                                          child: IconButton(
+-                                            key: const ValueKey('share-back'),
+-                                            visualDensity:
+-                                                VisualDensity.compact,
+-                                            icon: Icon(
+-                                              Symbols.arrow_back,
+-                                              color: cs.onSurface,
+-                                              weight: 500,
++                          if (_maxgramMobile)
++                            MaxgramToolbar(
++                              title: MaxgramLabels.chats(context),
++                              subtitle: connectionStatusLabel(_sessionState),
++                              onMenu: () => _maxgramScaffoldKey.currentState
++                                  ?.openDrawer(),
++                              onSearch: _openSearch,
++                            )
++                          else
++                            Padding(
++                              padding: const EdgeInsets.fromLTRB(20, 6, 20, 3),
++                              child: Row(
++                                mainAxisAlignment:
++                                    MainAxisAlignment.spaceBetween,
++                                children: [
++                                  Expanded(
++                                    child: Row(
++                                      children: [
++                                        if (_shareMode)
++                                          Padding(
++                                            padding: const EdgeInsets.only(
++                                              right: 4,
++                                            ),
++                                            child: IconButton(
++                                              key: const ValueKey('share-back'),
++                                              visualDensity:
++                                                  VisualDensity.compact,
++                                              icon: Icon(
++                                                Symbols.arrow_back,
++                                                color: cs.onSurface,
++                                                weight: 500,
++                                              ),
++                                              onPressed: () => Navigator.of(
++                                                context,
++                                              ).maybePop(),
+                                             ),
+-                                            onPressed: () => Navigator.of(
+-                                              context,
+-                                            ).maybePop(),
+                                           ),
+-                                        ),
+-                                      if (AppStories.current.value &&
+-                                          !_shareMode &&
+-                                          _pullRatio < 0.8 &&
+-                                          storiesModule.hasAny)
+-                                        Opacity(
+-                                          opacity: 1.0 - _pullRatio,
+-                                          child: GestureDetector(
+-                                            behavior: HitTestBehavior.opaque,
+-                                            onTap: () => _openStories(0),
+-                                            child: SizedBox(
+-                                              width:
+-                                                  (FoldedStoryStack.widthFor(
++                                        if (AppStories.current.value &&
++                                            !_shareMode &&
++                                            _pullRatio < 0.8 &&
++                                            storiesModule.hasAny)
++                                          Opacity(
++                                            opacity: 1.0 - _pullRatio,
++                                            child: GestureDetector(
++                                              behavior: HitTestBehavior.opaque,
++                                              onTap: () => _openStories(0),
++                                              child: SizedBox(
++                                                width:
++                                                    (FoldedStoryStack.widthFor(
++                                                          storiesModule
++                                                              .previews
++                                                              .length,
++                                                        ) +
++                                                        8) *
++                                                    (1.0 - _pullRatio),
++                                                height:
++                                                    FoldedStoryStack.outerSize,
++                                                child: OverflowBox(
++                                                  alignment:
++                                                      Alignment.centerLeft,
++                                                  maxWidth:
++                                                      FoldedStoryStack.widthFor(
+                                                         storiesModule
+                                                             .previews
+                                                             .length,
+-                                                      ) +
+-                                                      8) *
+-                                                  (1.0 - _pullRatio),
+-                                              height:
+-                                                  FoldedStoryStack.outerSize,
+-                                              child: OverflowBox(
+-                                                alignment: Alignment.centerLeft,
+-                                                maxWidth:
+-                                                    FoldedStoryStack.widthFor(
+-                                                      storiesModule
+-                                                          .previews
+-                                                          .length,
+-                                                    ),
+-                                                child: FoldedStoryStack(
+-                                                  previews:
+-                                                      storiesModule.previews,
+-                                                  opacity: 1.0 - _pullRatio,
++                                                      ),
++                                                  child: FoldedStoryStack(
++                                                    previews:
++                                                        storiesModule.previews,
++                                                    opacity: 1.0 - _pullRatio,
++                                                  ),
+                                                 ),
+                                               ),
+                                             ),
+                                           ),
+-                                        ),
+-                                      Flexible(
+-                                        child: Text(
+-                                          _shareMode &&
+-                                                  _selectedChats.isNotEmpty
+-                                              ? '${_selectedChats.length} '
+-                                                    '${pluralRu(_selectedChats.length, 'получатель', 'получателя', 'получателей')}'
+-                                              : connectionStatusLabel(
+-                                                      _sessionState,
+-                                                    ) ??
+-                                                    (_profile?.firstName ??
+-                                                        'Чат'),
+-                                          maxLines: 1,
+-                                          overflow: TextOverflow.ellipsis,
+-                                          style: TextStyle(
+-                                            color: cs.onSurface,
+-                                            fontSize: 20,
+-                                            fontWeight: FontWeight.w600,
+-                                            fontFamily: displayFontOf(context),
++                                        Flexible(
++                                          child: Text(
++                                            _shareMode &&
++                                                    _selectedChats.isNotEmpty
++                                                ? '${_selectedChats.length} '
++                                                      '${pluralRu(_selectedChats.length, 'получатель', 'получателя', 'получателей')}'
++                                                : connectionStatusLabel(
++                                                        _sessionState,
++                                                      ) ??
++                                                      (_profile?.firstName ??
++                                                          'Чат'),
++                                            maxLines: 1,
++                                            overflow: TextOverflow.ellipsis,
++                                            style: TextStyle(
++                                              color: cs.onSurface,
++                                              fontSize: 20,
++                                              fontWeight: FontWeight.w600,
++                                              fontFamily: displayFontOf(
++                                                context,
++                                              ),
++                                            ),
+                                           ),
+                                         ),
+-                                      ),
+-                                    ],
++                                      ],
++                                    ),
+                                   ),
+-                                ),
+-                                const SizedBox(width: 4),
+-                                Row(
+-                                  mainAxisSize: MainAxisSize.min,
+-                                  children: [
+-                                    if (!widget.forwardMode &&
+-                                        !widget.archiveMode &&
+-                                        !_shareMode)
+-                                      IconButton(
+-                                        key: const ValueKey('downloads-button'),
+-                                        tooltip: AppLocalizations.of(
+-                                          context,
+-                                        )!.downloadsTooltip,
++                                  const SizedBox(width: 4),
++                                  Row(
++                                    mainAxisSize: MainAxisSize.min,
++                                    children: [
++                                      if (!widget.forwardMode &&
++                                          !widget.archiveMode &&
++                                          !_shareMode)
++                                        IconButton(
++                                          key: const ValueKey(
++                                            'downloads-button',
++                                          ),
++                                          tooltip: AppLocalizations.of(
++                                            context,
++                                          )!.downloadsTooltip,
++                                          icon: Icon(
++                                            Symbols.download_for_offline,
++                                            color: cs.outline,
++                                            weight: 400,
++                                          ),
++                                          onPressed: () =>
++                                              unawaited(_openDownloads()),
++                                        ),
++                                      PopupMenuButton<int>(
+                                         icon: Icon(
+-                                          Symbols.download_for_offline,
++                                          Symbols.more_vert,
+                                           color: cs.outline,
+                                           weight: 400,
+                                         ),
+-                                        onPressed: () =>
+-                                            unawaited(_openDownloads()),
+-                                      ),
+-                                    PopupMenuButton<int>(
+-                                      icon: Icon(
+-                                        Symbols.more_vert,
+-                                        color: cs.outline,
+-                                        weight: 400,
+-                                      ),
+-                                      offset: const Offset(0, 48),
+-                                      elevation: 4,
+-                                      color: cs.surfaceContainerHigh,
+-                                      shape: RoundedRectangleBorder(
+-                                        borderRadius: BorderRadius.circular(16),
+-                                      ),
+-                                      onSelected: _onOverflowMenuSelected,
+-                                      itemBuilder: (context) => [
+-                                        _buildPopupMenuItem(
+-                                          1,
+-                                          'Избранное',
+-                                          Symbols.bookmark,
+-                                        ),
+-                                        _buildPopupMenuItem(
+-                                          2,
+-                                          'Прочитать всё',
+-                                          Symbols.done_all,
++                                        offset: const Offset(0, 48),
++                                        elevation: 4,
++                                        color: cs.surfaceContainerHigh,
++                                        shape: RoundedRectangleBorder(
++                                          borderRadius: BorderRadius.circular(
++                                            16,
++                                          ),
+                                         ),
+-                                      ],
+-                                    ),
+-                                  ],
+-                                ),
+-                              ],
++                                        onSelected: _onOverflowMenuSelected,
++                                        itemBuilder: (context) => [
++                                          _buildPopupMenuItem(
++                                            1,
++                                            'Избранное',
++                                            Symbols.bookmark,
++                                          ),
++                                          _buildPopupMenuItem(
++                                            2,
++                                            'Прочитать всё',
++                                            Symbols.done_all,
++                                          ),
++                                        ],
++                                      ),
++                                    ],
++                                  ),
++                                ],
++                              ),
+                             ),
+-                          ),
+                           if (AppStories.current.value)
+                             SizedBox(
+                               height: 96 * _pullRatio,
+@@ -1830,46 +1938,47 @@ class _ChatListScreenState extends State<ChatListScreen>
+                                 child: _buildStoriesRow(),
+                               ),
+                             ),
+-                          Padding(
+-                            padding: const EdgeInsets.fromLTRB(20, 3, 20, 8),
+-                            child: GestureDetector(
+-                              behavior: HitTestBehavior.opaque,
+-                              onTap: (widget.forwardMode || _shareMode)
+-                                  ? null
+-                                  : _openSearch,
+-                              child: GlossyPill(
+-                                color: cs.surfaceContainerHighest,
+-                                borderRadius: BorderRadius.circular(50),
+-                                padding: const EdgeInsets.symmetric(
+-                                  horizontal: 16,
+-                                ),
+-                                depth: 6,
+-                                child: SizedBox(
+-                                  height: 44,
+-                                  child: Row(
+-                                    children: [
+-                                      Icon(
+-                                        Symbols.search,
+-                                        color: cs.outline,
+-                                        size: 20,
+-                                        weight: 400,
+-                                      ),
+-                                      const SizedBox(width: 10),
+-                                      Text(
+-                                        widget.forwardMode
+-                                            ? 'Пересылка...'
+-                                            : 'Поиск',
+-                                        style: TextStyle(
++                          if (!_maxgramMobile)
++                            Padding(
++                              padding: const EdgeInsets.fromLTRB(20, 3, 20, 8),
++                              child: GestureDetector(
++                                behavior: HitTestBehavior.opaque,
++                                onTap: (widget.forwardMode || _shareMode)
++                                    ? null
++                                    : _openSearch,
++                                child: GlossyPill(
++                                  color: cs.surfaceContainerHighest,
++                                  borderRadius: BorderRadius.circular(50),
++                                  padding: const EdgeInsets.symmetric(
++                                    horizontal: 16,
++                                  ),
++                                  depth: 6,
++                                  child: SizedBox(
++                                    height: 44,
++                                    child: Row(
++                                      children: [
++                                        Icon(
++                                          Symbols.search,
+                                           color: cs.outline,
+-                                          fontSize: 15,
++                                          size: 20,
++                                          weight: 400,
+                                         ),
+-                                      ),
+-                                    ],
++                                        const SizedBox(width: 10),
++                                        Text(
++                                          widget.forwardMode
++                                              ? 'Пересылка...'
++                                              : 'Поиск',
++                                          style: TextStyle(
++                                            color: cs.outline,
++                                            fontSize: 15,
++                                          ),
++                                        ),
++                                      ],
++                                    ),
+                                   ),
+                                 ),
+                               ),
+                             ),
+-                          ),
+                         ],
+                       ),
+               ),
+@@ -2323,6 +2432,7 @@ class _ChatListScreenState extends State<ChatListScreen>
+     if (widget.archiveMode) {
+       return _buildArchiveScaffold(cs);
+     }
++    if (_maxgramMobile) return _buildMaxgramHome(cs);
+     return Scaffold(
+       backgroundColor: cs.surface,
+       body: SafeArea(
+@@ -2846,27 +2956,32 @@ class _ChatListScreenState extends State<ChatListScreen>
+ 
+   Widget _buildFolderChip(ChatFolder folder) {
+     final cs = Theme.of(context).colorScheme;
+-    final folderId = folder.id;
+-    final isSelected = _selectedFolderId == folderId;
+-    return GestureDetector(
+-      onTap: () => _selectFolder(folderId),
++    final selected = _selectedFolderId == folder.id;
++    return InkWell(
++      onTap: () => _selectFolder(folder.id),
+       onLongPress: () {
+         Haptics.medium();
+         showFolderActionSheet(context, folder: folder);
+       },
+-      child: GlossyPill(
+-        color: isSelected ? cs.primaryContainer : cs.surfaceContainerHigh,
+-        borderRadius: BorderRadius.circular(50),
+-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+-        depth: 4,
+-        child: Center(
+-          child: Text(
+-            _folderChipLabel(folder),
+-            textAlign: TextAlign.center,
+-            style: TextStyle(
+-              color: isSelected ? cs.onPrimaryContainer : cs.primary,
+-              fontSize: 13,
+-              fontWeight: FontWeight.w500,
++      child: DecoratedBox(
++        decoration: BoxDecoration(
++          border: Border(
++            bottom: BorderSide(
++              color: selected ? cs.primary : Colors.transparent,
++              width: 3,
++            ),
++          ),
++        ),
++        child: Padding(
++          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
++          child: Center(
++            child: Text(
++              _folderChipLabel(folder),
++              style: TextStyle(
++                color: selected ? cs.primary : cs.onSurfaceVariant,
++                fontSize: 14,
++                fontWeight: FontWeight.w500,
++              ),
+             ),
+           ),
+         ),
+@@ -3076,7 +3191,7 @@ class _ChatListScreenState extends State<ChatListScreen>
+     final story = (_isSelectionMode || widget.forwardMode)
+         ? null
+         : _storyPreviewFor(storyOwnerId);
+-    final avatarRadius = story == null ? 24.0 : 20.0;
++    final avatarRadius = story == null ? 28.0 : 24.0;
+ 
+     final CircleAvatar rawAvatar = CircleAvatar(
+       radius: avatarRadius,
+@@ -3184,7 +3299,7 @@ class _ChatListScreenState extends State<ChatListScreen>
+               ? cs.primary.withValues(alpha: 0.08)
+               : Colors.transparent,
+           child: Padding(
+-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
++            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+             child: Row(
+               crossAxisAlignment: CrossAxisAlignment.center,
+               children: [
+diff --git a/lib/frontend/screens/chats/chat_screen.dart b/lib/frontend/screens/chats/chat_screen.dart
+index 6fe53a6..82be0bd 100644
+--- a/lib/frontend/screens/chats/chat_screen.dart
++++ b/lib/frontend/screens/chats/chat_screen.dart
+@@ -1878,6 +1878,12 @@ class _ChatScreenState extends State<ChatScreen>
+         if (mounted) {
+           _isLoadingMore = false;
+           _bumpMessages();
++          showCustomNotification(
++            context,
++            Localizations.localeOf(context).languageCode == 'ru'
++                ? 'Не удалось загрузить историю. Прокрутите вверх, чтобы повторить.'
++                : 'Could not load history. Scroll up to retry.',
++          );
+         }
+       },
+     );
+diff --git a/lib/frontend/screens/contacts/contacts_tab.dart b/lib/frontend/screens/contacts/contacts_tab.dart
+index 3194469..c3e96df 100644
+--- a/lib/frontend/screens/contacts/contacts_tab.dart
++++ b/lib/frontend/screens/contacts/contacts_tab.dart
+@@ -1,4 +1,5 @@
+ import 'package:flutter/material.dart';
++import '../../../maxgram/maxgram_navigation.dart';
+ import 'package:material_symbols_icons/symbols.dart';
+ import '../../../core/config/debug_test.dart';
+ import '../../../core/contacts/device_contacts_service.dart';
+@@ -26,7 +27,9 @@ import '../../../core/config/app_shape.dart';
+ enum _SearchMode { phone, id }
+ 
+ class ContactsTab extends StatefulWidget {
+-  const ContactsTab({super.key});
++  const ContactsTab({super.key, this.standalone = false});
++
++  final bool standalone;
+ 
+   @override
+   State<ContactsTab> createState() => _ContactsTabState();
+@@ -223,44 +226,64 @@ class _ContactsTabState extends State<ContactsTab> with SpectrumSurface {
+     final cs = Theme.of(context).colorScheme;
+ 
+     return Scaffold(
++      appBar: widget.standalone
++          ? AppBar(
++              title: Text(MaxgramLabels.contacts(context)),
++              actions: [
++                IconButton(
++                  tooltip: MaxgramLabels.search(context),
++                  onPressed: _openSearchById,
++                  icon: const Icon(Icons.search),
++                ),
++                IconButton(
++                  tooltip: MaxgramLabels.ru(context)
++                      ? 'Добавить контакт'
++                      : 'Add contact',
++                  onPressed: _openNfcExchange,
++                  icon: const Icon(Icons.person_add_outlined),
++                ),
++              ],
++            )
++          : null,
+       backgroundColor: spectrumSurfaceColor(cs),
+       body: SafeArea(
+         bottom: false,
+         child: Column(
+           children: [
+-            Padding(
+-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+-              child: Row(
+-                children: [
+-                  Expanded(
+-                    child: Column(
+-                      crossAxisAlignment: CrossAxisAlignment.start,
+-                      mainAxisSize: MainAxisSize.min,
+-                      children: [
+-                        Text(
+-                          'Контакты',
+-                          style: TextStyle(
+-                            color: cs.onSurface,
+-                            fontSize: 24,
+-                            fontWeight: FontWeight.w700,
+-                            fontFamily: displayFontOf(context),
++            if (!widget.standalone)
++              Padding(
++                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
++                child: Row(
++                  children: [
++                    Expanded(
++                      child: Column(
++                        crossAxisAlignment: CrossAxisAlignment.start,
++                        mainAxisSize: MainAxisSize.min,
++                        children: [
++                          Text(
++                            'Контакты',
++                            style: TextStyle(
++                              color: cs.onSurface,
++                              fontSize: 24,
++                              fontWeight: FontWeight.w700,
++                              fontFamily: displayFontOf(context),
++                            ),
+                           ),
+-                        ),
+-                        const ConnectionStatusLine(),
+-                      ],
++                          const ConnectionStatusLine(),
++                        ],
++                      ),
+                     ),
+-                  ),
+-                  IconButton(
+-                    icon: Icon(Symbols.person_add, color: cs.onSurface),
+-                    onPressed: _openNfcExchange,
+-                  ),
+-                  IconButton(
+-                    icon: Icon(Symbols.search, color: cs.onSurface),
+-                    onPressed: _openSearchById,
+-                  ),
+-                ],
++                    IconButton(
++                      icon: Icon(Symbols.person_add, color: cs.onSurface),
++                      onPressed: _openNfcExchange,
++                    ),
++                    IconButton(
++                      icon: Icon(Symbols.search, color: cs.onSurface),
++                      onPressed: _openSearchById,
++                    ),
++                  ],
++                ),
+               ),
+-            ),
+             Expanded(
+               child: _isLoading
+                   ? const Center(child: SmallSpinner(size: 36))
+diff --git a/lib/frontend/screens/profile/settings_tab.dart b/lib/frontend/screens/profile/settings_tab.dart
+index 07fbf27..9c0a88c 100644
+--- a/lib/frontend/screens/profile/settings_tab.dart
++++ b/lib/frontend/screens/profile/settings_tab.dart
+@@ -4,6 +4,7 @@ import 'dart:ui' show lerpDouble;
+ 
+ import 'package:cached_network_image/cached_network_image.dart';
+ import 'package:flutter/material.dart';
++import '../../../maxgram/maxgram_navigation.dart';
+ import 'package:flutter/services.dart' show HapticFeedback;
+ import 'package:material_symbols_icons/symbols.dart';
+ import 'package:package_info_plus/package_info_plus.dart';
+@@ -51,7 +52,9 @@ import '../../../core/config/app_fonts.dart';
+ import '../../../core/config/app_shape.dart';
+ 
+ class SettingsTab extends StatefulWidget {
+-  const SettingsTab({super.key});
++  const SettingsTab({super.key, this.standalone = false});
++
++  final bool standalone;
+ 
+   @override
+   State<SettingsTab> createState() => _SettingsTabState();
+@@ -345,7 +348,12 @@ class _SettingsTabState extends State<SettingsTab> with SpectrumSurface {
+     final l10n = AppLocalizations.of(context)!;
+ 
+     if (_profile == null) {
+-      return const Center(child: SmallSpinner(size: 36));
++      return Scaffold(
++        appBar: widget.standalone
++            ? AppBar(title: Text(MaxgramLabels.settings(context)))
++            : null,
++        body: const Center(child: SmallSpinner(size: 36)),
++      );
+     }
+ 
+     final String fullName =
+@@ -368,6 +376,9 @@ class _SettingsTabState extends State<SettingsTab> with SpectrumSurface {
+         final delta = expandedH - collapsedH;
+         _syncHeaderDelta(delta);
+         return Scaffold(
++          appBar: widget.standalone
++              ? AppBar(title: Text(MaxgramLabels.settings(context)))
++              : null,
+           backgroundColor: spectrumSurfaceColor(cs),
+           body: NotificationListener<ScrollNotification>(
+             onNotification: (n) => _handleScrollNotification(n, delta),
+diff --git a/lib/l10n/app_en.arb b/lib/l10n/app_en.arb
+index d747053..94318c8 100644
+--- a/lib/l10n/app_en.arb
++++ b/lib/l10n/app_en.arb
+@@ -1,7 +1,7 @@
+ {
+   "@@locale": "en",
+-  "loginTitle": "Sign in to Komet",
+-  "loginSubtitle": "Check your country code and enter your\nphone number.",
++  "loginTitle": "Your phone number",
++  "loginSubtitle": "Check the country code and enter the phone number of your MAX account.",
+   "loginCountry": "Country",
+   "loginPhoneNumber": "Phone number",
+   "loginOtherSignInMethods": "Other sign-in methods",
+diff --git a/lib/l10n/app_ru.arb b/lib/l10n/app_ru.arb
+index bbf613b..d1cc256 100644
+--- a/lib/l10n/app_ru.arb
++++ b/lib/l10n/app_ru.arb
+@@ -1,7 +1,7 @@
+ {
+   "@@locale": "ru",
+-  "loginTitle": "Войдите в Komet",
+-  "loginSubtitle": "Проверьте код страны и введите свой\nномер телефона.",
++  "loginTitle": "Ваш номер телефона",
++  "loginSubtitle": "Проверьте код страны и введите свой номер телефона из аккаунта MAX.",
+   "loginCountry": "Страна",
+   "loginPhoneNumber": "Номер телефона",
+   "loginOtherSignInMethods": "Другие способы входа",
+diff --git a/lib/main.dart b/lib/main.dart
+index 73dcaf8..e389870 100644
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -1,4 +1,5 @@
+ import 'dart:async';
++import 'maxgram/maxgram_theme.dart';
+ import 'dart:math' as math;
+ import 'dart:ui' as ui;
+ 
+@@ -353,7 +354,7 @@ class KometApp extends StatefulWidget {
+ 
+ class KometAppState extends State<KometApp>
+     with WidgetsBindingObserver, TickerProviderStateMixin {
+-  static const _fallbackSeed = Color(0xFFC1C4FF);
++  static const _fallbackSeed = MaxgramTheme.accent;
+ 
+   final GlobalKey _captureBoundaryKey = GlobalKey();
+   OverlayEntry? _revealEntry;
+@@ -899,31 +900,39 @@ class KometAppState extends State<KometApp>
+     _themeCacheLight = light;
+     _themeCacheDark = dark;
+     final displayFont = AppDisplayFont(AppFonts.displayFamily(_fontId));
+-    _lightTheme = withM3ETheme(
+-      ThemeData(
+-        useMaterial3: true,
+-        colorScheme: light,
+-        pageTransitionsTheme: _appPageTransitions,
+-        progressIndicatorTheme: _expressiveProgressTheme,
+-        extensions: [displayFont],
+-        textTheme: AppFonts.textTheme(
+-          _fontId,
+-          ThemeData(brightness: Brightness.light).textTheme,
++    _lightTheme = MaxgramTheme.apply(
++      withM3ETheme(
++        ThemeData(
++          useMaterial3: false,
++          colorScheme: light,
++          pageTransitionsTheme: _appPageTransitions,
++          progressIndicatorTheme: _expressiveProgressTheme,
++          extensions: [displayFont],
++          textTheme: AppFonts.textTheme(
++            _fontId,
++            ThemeData(brightness: Brightness.light).textTheme,
++          ),
+         ),
+       ),
++      accentColor: accentSeed.value,
++      fontFamily: AppFonts.resolve(_fontId).fontFamily,
+     );
+-    _darkTheme = withM3ETheme(
+-      ThemeData(
+-        useMaterial3: true,
+-        colorScheme: dark,
+-        pageTransitionsTheme: _appPageTransitions,
+-        progressIndicatorTheme: _expressiveProgressTheme,
+-        extensions: [displayFont],
+-        textTheme: AppFonts.textTheme(
+-          _fontId,
+-          ThemeData(brightness: Brightness.dark).textTheme,
++    _darkTheme = MaxgramTheme.apply(
++      withM3ETheme(
++        ThemeData(
++          useMaterial3: false,
++          colorScheme: dark,
++          pageTransitionsTheme: _appPageTransitions,
++          progressIndicatorTheme: _expressiveProgressTheme,
++          extensions: [displayFont],
++          textTheme: AppFonts.textTheme(
++            _fontId,
++            ThemeData(brightness: Brightness.dark).textTheme,
++          ),
+         ),
+       ),
++      accentColor: accentSeed.value,
++      fontFamily: AppFonts.resolve(_fontId).fontFamily,
+     );
+   }
+ 
+@@ -1007,7 +1016,7 @@ class KometAppState extends State<KometApp>
+             _rebuildThemesIfNeeded(lightScheme, darkScheme);
+ 
+             return MaterialApp(
+-              title: 'Komet',
++              title: 'MAXGRAM',
+               debugShowCheckedModeBanner: false,
+               locale: _locale,
+               themeMode: _effectiveThemeMode,
+diff --git a/pubspec.yaml b/pubspec.yaml
+index 78c1dc2..4b2c0d4 100644
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -1,5 +1,5 @@
+ name: komet
+-description: "A new Flutter project."
++description: "MAXGRAM CLIENT: Telegram-style interface powered by Komet."
+ # The following line prevents the package from being accidentally published to
+ # pub.dev using `flutter pub publish`. This is preferred for private packages.
+ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+ # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+ # In Windows, build-name is used as the major, minor, and patch parts
+ # of the product and file versions while build-number is used as the build suffix.
+-version: 0.5.19+19
++version: 0.4.0-dev.1+16
+ 
+ environment:
+   sdk: ^3.10.4

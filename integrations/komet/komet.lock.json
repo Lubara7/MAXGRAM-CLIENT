@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/KometTeam/Komet.git",
+  "commit": "7bbb73bd2c05877e48b37f6ec6f096471a341404",
+  "source": "upstream/komet-ui",
+  "flutter": "3.44.3",
+  "version": "0.4.0-dev.1+16",
+  "applicationId": "io.github.lubara7.maxgram.preview",
+  "status": "experimental-ui-migration",
+  "backendFixes": {
+    "lib/backend/modules/messages.dart": {
+      "beforeSha256": "f70a27eb622b62c2341fdf99e24cb34a66ac388a2bf3db37bac16f8b931a197c",
+      "afterSha256": "ca15f41215134169df1f5c38859d83a4cd17fb36a04e287306bbce36cba0d26b",
+      "reason": "Preserve retryable history errors instead of reporting an empty history page"
+    }
+  }
+}

@@ -12,3 +12,6 @@
 [submodule "upstream/nagram"]
 	path = upstream/nagram
 	url = https://github.com/NextAlone/Nagram.git
+[submodule "upstream/komet-ui"]
+	path = upstream/komet-ui
+	url = https://github.com/KometTeam/Komet.git

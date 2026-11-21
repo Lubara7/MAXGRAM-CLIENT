@@ -16,6 +16,8 @@ The UI base is pinned to NextAlone/Nagram under GPL v3. NagramXF remains a refer
 
 ## Android client
 
+The `komet-telegram-ui` branch contains the newer Komet-based client direction: [preparation, implemented changes and limitations](docs/komet-ui-migration.md). It preserves Komet's MAX implementation and recreates Telegram-style screens in Flutter. The published 0.3.0 APK belongs to the older Java client and does not contain these Flutter changes.
+
 Telegram-style navigation, chat list and message bubbles, connected to MAX. The backend can request and poll a server-issued QR challenge; authenticated QR approval in Devices remains unfinished and QR is absent from the login screen. Phone-number sign-in supports CAPTCHA, a verification code, an account password and server-selected outgoing-call verification. The login screen includes language selection, help and MAX legal documents.
 
 **Languages (specification v2):** Русский · English.
