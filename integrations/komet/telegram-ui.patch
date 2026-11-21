@@ -138,7 +138,7 @@ index 624468f..a372a19 100644
  @immutable
  class AppDisplayFont extends ThemeExtension<AppDisplayFont> {
 diff --git a/lib/core/utils/update_checker.dart b/lib/core/utils/update_checker.dart
-index 6501979..9edd9f2 100644
+index 6501979..6759ad9 100644
 --- a/lib/core/utils/update_checker.dart
 +++ b/lib/core/utils/update_checker.dart
 @@ -39,9 +39,9 @@ class UpdateCheckResult {
@@ -164,6 +164,16 @@ index 6501979..9edd9f2 100644
          return entry.cast<String, dynamic>();
        }
        return null;
+@@ -237,6 +240,7 @@ abstract class UpdateChecker {
+     return 0;
+   }
+ 
+-  static List<int> _parts(String v) =>
+-      v.split('.').map((p) => int.tryParse(p.trim()) ?? 0).toList();
++  static List<int> _parts(String v) => _baseVersion(
++    v,
++  ).split('.').map((p) => int.tryParse(p.trim()) ?? 0).toList();
+ }
 diff --git a/lib/frontend/screens/auth/code_confirmation_screen.dart b/lib/frontend/screens/auth/code_confirmation_screen.dart
 index 03912ba..7c0af77 100644
 --- a/lib/frontend/screens/auth/code_confirmation_screen.dart
@@ -1304,7 +1314,7 @@ index 73dcaf8..e389870 100644
                locale: _locale,
                themeMode: _effectiveThemeMode,
 diff --git a/pubspec.yaml b/pubspec.yaml
-index 78c1dc2..f58ea00 100644
+index 78c1dc2..32e4fa1 100644
 --- a/pubspec.yaml
 +++ b/pubspec.yaml
 @@ -1,5 +1,5 @@
@@ -1319,7 +1329,7 @@ index 78c1dc2..f58ea00 100644
  # In Windows, build-name is used as the major, minor, and patch parts
  # of the product and file versions while build-number is used as the build suffix.
 -version: 0.5.19+19
-+version: 0.4.0-dev.2+17
++version: 0.4.0-dev.3+18
  
  environment:
    sdk: ^3.10.4

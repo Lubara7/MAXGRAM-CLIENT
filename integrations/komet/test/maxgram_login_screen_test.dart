@@ -147,4 +147,17 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
     },
   );
+
+  testWidgets('the enabled continue button stays above the software keyboard', (
+    tester,
+  ) async {
+    await showLogin(tester);
+    await tester.enterText(find.byType(TextField), '0000000000');
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+    final button = find.byType(FloatingActionButton);
+    expect(tester.widget<FloatingActionButton>(button).onPressed, isNotNull);
+    expect(tester.getBottomRight(button).dy, lessThanOrEqualTo(340));
+    expect(tester.takeException(), isNull);
+  });
 }

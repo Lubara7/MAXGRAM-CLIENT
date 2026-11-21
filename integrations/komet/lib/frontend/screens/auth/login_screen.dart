@@ -454,63 +454,75 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: FloatingActionButton(
-                  onPressed: !_valid || _submitting ? null : _submit,
-                  tooltip: _text('Продолжить', 'Continue'),
-                  child: _submitting
-                      ? SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color:
-                                theme.floatingActionButtonTheme.foregroundColor,
-                          ),
-                        )
-                      : const Icon(Icons.arrow_forward),
+      floatingActionButton: FloatingActionButton(
+        onPressed: !_valid || _submitting ? null : _submit,
+        tooltip: _text('Продолжить', 'Continue'),
+        backgroundColor: _valid || _submitting
+            ? cs.primary
+            : cs.surfaceContainerHighest,
+        foregroundColor: _valid || _submitting
+            ? theme.floatingActionButtonTheme.foregroundColor
+            : cs.onSurfaceVariant,
+        child: _submitting
+            ? SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: theme.floatingActionButtonTheme.foregroundColor,
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _text(
-                  'Продолжая, вы принимаете условия MAX:',
-                  'By continuing, you accept the MAX terms:',
-                ),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
-              ),
-              Wrap(
-                alignment: WrapAlignment.center,
-                children: [
-                  for (final (label, url) in [
-                    (
-                      _text('Конфиденциальность', 'Privacy'),
-                      'https://legal.max.ru/pp',
-                    ),
-                    (_text('Соглашение', 'Terms'), 'https://legal.max.ru/ps'),
-                    (
-                      _text('Рекомендации', 'Recommendations'),
-                      'https://legal.max.ru/recsysrules',
-                    ),
-                  ])
-                    TextButton(
-                      onPressed: () => _openPage(url),
-                      child: Text(label, style: const TextStyle(fontSize: 12)),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
+              )
+            : const Icon(Icons.arrow_forward),
       ),
+      bottomNavigationBar: MediaQuery.viewInsetsOf(context).bottom > 0
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _text(
+                        'Продолжая, вы принимаете условия MAX:',
+                        'By continuing, you accept the MAX terms:',
+                      ),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: cs.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      children: [
+                        for (final (label, url) in [
+                          (
+                            _text('Конфиденциальность', 'Privacy'),
+                            'https://legal.max.ru/pp',
+                          ),
+                          (
+                            _text('Соглашение', 'Terms'),
+                            'https://legal.max.ru/ps',
+                          ),
+                          (
+                            _text('Рекомендации', 'Recommendations'),
+                            'https://legal.max.ru/recsysrules',
+                          ),
+                        ])
+                          TextButton(
+                            onPressed: () => _openPage(url),
+                            child: Text(
+                              label,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 }

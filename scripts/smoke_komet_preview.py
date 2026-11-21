@@ -26,6 +26,62 @@ def label(node):
     return node.get('text', '') + ' ' + node.get('content-desc', '')
 
 
+def bounds(node):
+    values = [int(value) for value in re.findall(r'\d+', node.get('bounds', ''))]
+    if len(values) != 4:
+        raise RuntimeError('Missing UI bounds')
+    return values
+
+
+def check_keyboard(tree, output):
+    field = next(node for node in tree.iter('node') if node.get('class') == 'android.widget.EditText')
+    left, top, right, bottom = bounds(field)
+    adb('shell', 'settings', 'put', 'secure', 'show_ime_with_hard_keyboard', '1')
+    adb('shell', 'input', 'tap', str((left + right) // 2), str((top + bottom) // 2))
+    adb('shell', 'input', 'text', '0000000000')
+    try:
+        for _ in range(8):
+            time.sleep(1)
+            try:
+                keyboard_tree = capture(output)
+            except (subprocess.SubprocessError, ET.ParseError):
+                continue
+            nodes = list(keyboard_tree.iter('node'))
+            next_button = next((node for node in nodes if label(node).strip() in {'Continue', 'Продолжить'}), None)
+            windows = adb('shell', 'dumpsys', 'window', 'windows')
+            ime_top = None
+            for line in windows.splitlines():
+                if not ('ITYPE_IME' in line or 'type=ime' in line) or 'visible=true' not in line.lower():
+                    continue
+                frame = re.search(r'(?:mFrame|\bframe)=\[(\d+),(\d+)\]\[(\d+),(\d+)\]', line)
+                if frame and int(frame[2]) > 0:
+                    ime_top = int(frame[2])
+                    break
+            for block in windows.split('Window #')[1:]:
+                if ime_top is not None:
+                    break
+                header = block.splitlines()[0]
+                if 'InputMethod' not in header and 'inputmethod' not in header:
+                    continue
+                frame = re.search(r'(?:mFrame|\bframe)=\[(\d+),(\d+)\]\[(\d+),(\d+)\]', block)
+                if frame and int(frame[2]) > 0:
+                    ime_top = int(frame[2])
+                    break
+            if ime_top is None:
+                tops = [bounds(node)[1] for node in nodes if 'inputmethod' in node.get('package', '')]
+                ime_top = min(tops) if tops else None
+            if next_button is not None and ime_top is not None and ime_top > 0:
+                button_bottom = bounds(next_button)[3]
+                if button_bottom > ime_top:
+                    raise RuntimeError('Continue is covered by the software keyboard')
+                return {'keyboardTop': ime_top, 'continueBottom': button_bottom, 'continueAboveKeyboard': True}
+        raise RuntimeError('Could not verify the continue button with the keyboard open')
+    finally:
+        (output / 'phone-keyboard.png').write_bytes(adb('exec-out', 'screencap', '-p', binary=True))
+        adb('shell', 'input', 'keyevent', *(['67'] * 20))
+        adb('shell', 'input', 'keyevent', '4')
+
+
 def main():
     parser = argparse.ArgumentParser()
     source = parser.add_mutually_exclusive_group(required=True)
@@ -75,6 +131,7 @@ def main():
         language_button = any(text in {'Language', 'Язык'} for text in labels)
         if not country or not help_button or not language_button:
             raise RuntimeError('The default country or login toolbar controls were not observed')
+        keyboard = check_keyboard(tree, output)
         process = adb('shell', 'pidof', PACKAGE).strip()
         if not process:
             raise RuntimeError('Preview process is not running')
@@ -86,6 +143,7 @@ def main():
             'defaultRussiaObserved': country,
             'helpControlObserved': help_button,
             'languageControlObserved': language_button,
+            'keyboard': keyboard,
             'realAccountLoginAttempted': False,
         }
         (output / 'startup.json').write_text(json.dumps(result, indent=2) + '\n')

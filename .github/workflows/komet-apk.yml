@@ -19,7 +19,7 @@ env:
   FLUTTER_SUPPRESS_ANALYTICS: 'true'
   CARGO_BUILD_JOBS: '2'
   PREVIEW_KEYSTORE: /tmp/maxgram-signing/preview.keystore
-  PREVIEW_TAG: v0.4.0-dev.2-komet-ui
+  PREVIEW_TAG: v0.4.0-dev.3+18-komet-ui
 
 jobs:
   build:
