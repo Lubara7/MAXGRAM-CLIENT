@@ -9,6 +9,7 @@ on:
       - 'scripts/prepare_komet_client.py'
       - 'scripts/package_komet_preview.py'
       - 'scripts/smoke_komet_preview.py'
+      - 'scripts/test_smoke_komet_preview.py'
   workflow_dispatch:
 
 permissions:
@@ -30,6 +31,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+      - name: Check Android evidence parser
+        run: python3 -m unittest discover -s scripts -p test_smoke_komet_preview.py -v
       - uses: actions/setup-java@v6
         with:
           distribution: temurin

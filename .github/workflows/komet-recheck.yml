@@ -1,0 +1,136 @@
+name: Recheck and publish Komet preview APK
+
+on:
+  push:
+    branches: [komet-telegram-ui]
+    paths:
+      - '.github/workflows/komet-recheck.yml'
+      - 'scripts/smoke_komet_preview.py'
+      - 'scripts/test_smoke_komet_preview.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  SOURCE_RUN: '44924690580'
+  SOURCE_SHA: f3d9cc997d82a4ea030df39814346ceafdb45f03
+  PREVIEW_TAG: v0.4.0-dev.3+18-komet-ui
+
+jobs:
+  verify:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[recheck-komet-apk]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Check Android evidence parser
+        run: python3 -m unittest discover -s scripts -p test_smoke_komet_preview.py -v
+      - name: Download compiled APKs and corresponding source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "$SOURCE_RUN" --name komet-preview-files --dir dist
+      - name: Verify build identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,subprocess
+          from pathlib import Path
+          provenance=json.loads(Path('dist/build-provenance.json').read_text())
+          lock=json.loads(Path('integrations/komet/komet.lock.json').read_text())
+          run=json.loads(subprocess.check_output(['gh','api','repos/'+os.environ['GITHUB_REPOSITORY']+'/actions/runs/'+os.environ['SOURCE_RUN']],text=True))
+          jobs=json.loads(subprocess.check_output(['gh','api','repos/'+os.environ['GITHUB_REPOSITORY']+'/actions/runs/'+os.environ['SOURCE_RUN']+'/jobs'],text=True))
+          assert provenance['sourceCommit']==os.environ['SOURCE_SHA']==run['head_sha']
+          assert provenance['workflowRun']==os.environ['SOURCE_RUN']
+          assert run['path']=='.github/workflows/komet-apk.yml'
+          assert any(job['name']=='build' and job['conclusion']=='success' for job in jobs['jobs'])
+          assert provenance['version']==lock['version']
+          assert provenance['applicationId']==lock['applicationId']
+          assert provenance['upstreamCommit']==lock['commit']
+          assert os.environ['PREVIEW_TAG']=='v'+provenance['version']+'-komet-ui'
+          assert {artifact['abi'] for artifact in provenance['artifacts']}=={'arm64-v8a','x86_64'}
+          for artifact in provenance['artifacts']:
+              path=Path('dist')/artifact['name']
+              with path.open('rb') as stream: digest=hashlib.file_digest(stream,'sha256').hexdigest()
+              assert digest==artifact['sha256'] and path.stat().st_size==artifact['bytes']
+          archive=next(Path('dist').glob('*-source.tar.gz'))
+          with archive.open('rb') as stream: assert hashlib.file_digest(stream,'sha256').hexdigest()==provenance['sourceArchiveSha256']
+          print(json.dumps({'sourceCommit':provenance['sourceCommit'],'buildRun':provenance['workflowRun'],'compiledArtifactsVerified':True}))
+          PY
+          git fetch --depth=1 origin "$SOURCE_SHA"
+          git diff --exit-code "$SOURCE_SHA" -- .gitmodules upstream/komet-ui integrations/komet scripts/prepare_komet_client.py scripts/package_komet_preview.py
+      - name: Verify all build checksums
+        working-directory: dist
+        run: sha256sum -c SHA256SUMS.txt
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: python3 scripts/smoke_komet_preview.py --artifacts dist --output smoke-evidence
+      - name: Record verification provenance
+        run: |
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          build=json.loads(Path('dist/build-provenance.json').read_text())
+          startup=json.loads(Path('smoke-evidence/startup.json').read_text())
+          emulator=next(artifact for artifact in build['artifacts'] if artifact['abi']=='x86_64')
+          assert startup['apkSha256']==emulator['sha256']
+          assert startup['keyboard']['continueAboveKeyboard']
+          result={'applicationSourceCommit':build['sourceCommit'],'verificationSourceCommit':os.environ['GITHUB_SHA'],'buildRun':os.environ['SOURCE_RUN'],'verificationRun':os.environ['GITHUB_RUN_ID'],'parserTestsPassed':5,'android':startup}
+          Path('smoke-evidence/verification-provenance.json').write_text(json.dumps(result,indent=2)+'\n')
+          print('MAXGRAM_VERIFICATION:'+json.dumps(result))
+          PY
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: komet-preview-startup
+          path: smoke-evidence/
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Retrieve matching build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "$SOURCE_RUN" --name komet-preview-files --dir dist
+      - uses: actions/download-artifact@v6
+        with:
+          name: komet-preview-startup
+          path: smoke-evidence
+      - name: Publish verified experimental APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip -r dist/android-startup-evidence.zip smoke-evidence
+          cp smoke-evidence/verification-provenance.json dist/verification-provenance.json
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          with Path('dist/SHA256SUMS.txt').open('a') as target:
+              for name in ['android-startup-evidence.zip','verification-provenance.json']:
+                  with (Path('dist')/name).open('rb') as stream: digest=hashlib.file_digest(stream,'sha256').hexdigest()
+                  target.write(digest+'  '+name+'\n')
+          PY
+          gh release create "$PREVIEW_TAG" --draft --prerelease --target "$SOURCE_SHA" --title "MAXGRAM CLIENT $PREVIEW_TAG — Komet preview" --notes-file docs/komet-preview-release.md
+          gh release upload "$PREVIEW_TAG" dist/*
+          gh release edit "$PREVIEW_TAG" --draft=false --prerelease --latest=false

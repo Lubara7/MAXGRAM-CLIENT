@@ -33,6 +33,18 @@ def bounds(node):
     return values
 
 
+def keyboard_top(windows):
+    for source in re.findall(r'InsetsSource:\s*\{([^{}]*)\}', windows):
+        if not re.search(r'\b(?:mType|type)=(?:ITYPE_IME|ime)\b', source, re.IGNORECASE):
+            continue
+        if not re.search(r'\b(?:mVisible|visible)=true\b', source, re.IGNORECASE):
+            continue
+        frame = re.search(r'(?:mFrame|\bframe)=\[(\d+),(\d+)\]\[(\d+),(\d+)\]', source)
+        if frame and int(frame[2]) > 0:
+            return int(frame[2])
+    return None
+
+
 def check_keyboard(tree, output):
     field = next(node for node in tree.iter('node') if node.get('class') == 'android.widget.EditText')
     left, top, right, bottom = bounds(field)
@@ -51,28 +63,10 @@ def check_keyboard(tree, output):
             windows = adb('shell', 'dumpsys', 'window', 'windows')
             (output / 'window-keyboard.txt').write_text(windows)
             (output / 'input-method.txt').write_text(adb('shell', 'dumpsys', 'input_method'))
-            ime_top = None
-            for line in windows.splitlines():
-                if not ('ITYPE_IME' in line or 'type=ime' in line) or 'visible=true' not in line.lower():
-                    continue
-                frame = re.search(r'(?:mFrame|\bframe)=\[(\d+),(\d+)\]\[(\d+),(\d+)\]', line)
-                if frame and int(frame[2]) > 0:
-                    ime_top = int(frame[2])
-                    break
-            for block in windows.split('Window #')[1:]:
-                if ime_top is not None:
-                    break
-                header = block.splitlines()[0]
-                if 'InputMethod' not in header and 'inputmethod' not in header:
-                    continue
-                frame = re.search(r'(?:mFrame|\bframe)=\[(\d+),(\d+)\]\[(\d+),(\d+)\]', block)
-                if frame and int(frame[2]) > 0:
-                    ime_top = int(frame[2])
-                    break
-            if ime_top is None:
-                tops = [bounds(node)[1] for node in nodes if 'inputmethod' in node.get('package', '')]
-                ime_top = min(tops) if tops else None
+            ime_top = keyboard_top(windows)
             if next_button is not None and ime_top is not None and ime_top > 0:
+                if next_button.get('enabled') != 'true':
+                    raise RuntimeError('Continue did not become enabled after phone input')
                 button_bottom = bounds(next_button)[3]
                 if button_bottom > ime_top:
                     raise RuntimeError(f'Continue is covered by the software keyboard: buttonBottom={button_bottom}, keyboardTop={ime_top}')

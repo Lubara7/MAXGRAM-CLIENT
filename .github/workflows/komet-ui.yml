@@ -9,12 +9,16 @@ on:
       - 'upstream/komet-ui'
       - 'integrations/komet/**'
       - 'scripts/prepare_komet_client.py'
+      - 'scripts/smoke_komet_preview.py'
+      - 'scripts/test_smoke_komet_preview.py'
   pull_request:
     paths:
       - '.github/workflows/komet-ui.yml'
       - 'upstream/komet-ui'
       - 'integrations/komet/**'
       - 'scripts/prepare_komet_client.py'
+      - 'scripts/smoke_komet_preview.py'
+      - 'scripts/test_smoke_komet_preview.py'
   workflow_dispatch:
 
 permissions:
@@ -32,6 +36,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Check Android evidence parser
+        run: python3 -m unittest discover -s scripts -p test_smoke_komet_preview.py -v
       - name: Fetch pinned Komet source
         run: git submodule update --init upstream/komet-ui
       - name: Prepare Telegram presentation
