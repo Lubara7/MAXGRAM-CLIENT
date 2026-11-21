@@ -46,8 +46,9 @@ class MaxgramOtpChallenge extends ChangeNotifier {
     operation = Future.sync(requestNewCode)
         .then((token) {
           if (_disposed || generation != _generation) return false;
-          if (token.isEmpty)
+          if (token.isEmpty) {
             throw const FormatException('Empty verification token');
+          }
           _token = token;
           _retryAt = _now().add(resendDelay);
           return true;

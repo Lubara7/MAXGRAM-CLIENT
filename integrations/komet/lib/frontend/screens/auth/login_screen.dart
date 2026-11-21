@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../backend/api.dart';
+import '../../../backend/modules/account.dart';
 import '../../../core/config/countries.dart';
 import '../../../core/protocol/packet.dart';
 import '../../../main.dart';
@@ -18,15 +19,24 @@ import 'select_country_screen.dart';
 import 'token_login_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.returnToAccountId});
+  const LoginScreen({
+    super.key,
+    this.returnToAccountId,
+    this.connection,
+    this.account,
+  }) : assert((connection == null) == (account == null));
 
   final int? returnToAccountId;
+  final Api? connection;
+  final AccountModule? account;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  Api get _api => widget.connection ?? api;
+  AccountModule get _account => widget.account ?? accountModule;
   final _phone = TextEditingController();
   StreamSubscription<SessionState>? _connection;
   CountryName? _country;
@@ -38,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool get _ru => MaxgramLabels.ru(context);
   String _text(String ru, String en) => _ru ? ru : en;
   List<CountryName> get _countries =>
-      maxgramLoginCountries(api.registrationCountries);
+      maxgramLoginCountries(_api.registrationCountries);
   bool get _valid =>
       _country != null &&
       _phone.text.replaceAll(RegExp(r'\D'), '').length == _country!.phoneDigits;
@@ -48,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     final countries = _countries;
     _country = countries.isEmpty ? null : countries.first;
-    _connection = api.stateStream.listen((_) {
+    _connection = _api.stateStream.listen((_) {
       if (!mounted) return;
       setState(() {
         final countries = _countries;
@@ -58,16 +68,17 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       });
     });
-    if (api.state == SessionState.disconnected) {
+    if (_api.state == SessionState.disconnected) {
       unawaited(
-        api.connect().catchError((Object error) {
-          if (mounted)
+        _api.connect().catchError((Object error) {
+          if (mounted) {
             setState(
               () => _error = _text(
                 'Не удалось подключиться. Попробуйте ещё раз.',
                 'Could not connect. Please try again.',
               ),
             );
+          }
         }),
       );
     }
@@ -135,17 +146,19 @@ class _LoginScreenState extends State<LoginScreen> {
         Uri.parse(address),
         mode: LaunchMode.inAppBrowserView,
       );
-      if (!opened && mounted)
+      if (!opened && mounted) {
         showCustomNotification(
           context,
           _text('Не удалось открыть страницу', 'Could not open the page'),
         );
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         showCustomNotification(
           context,
           _text('Не удалось открыть страницу', 'Could not open the page'),
         );
+      }
     }
   }
 
@@ -217,18 +230,19 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     try {
       await resetDigitalIdSession();
-      await accountModule.switchAccount(previous);
+      await _account.switchAccount(previous);
       if (!mounted) return;
       await Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const AdaptiveShell()),
         (_) => false,
       );
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         showCustomNotification(
           context,
           _text('Не удалось переключить аккаунт', 'Could not switch accounts'),
         );
+      }
     }
   }
 
@@ -264,17 +278,17 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
       if (!mounted || confirmed != true) return;
-      if (api.state != SessionState.online) {
-        if (api.state == SessionState.disconnected) await api.connect();
+      if (_api.state != SessionState.online) {
+        if (_api.state == SessionState.disconnected) await _api.connect();
         if (!mounted) return;
-        if (api.state != SessionState.online) {
-          await api.stateStream
+        if (_api.state != SessionState.online) {
+          await _api.stateStream
               .firstWhere((state) => state == SessionState.online)
               .timeout(const Duration(seconds: 15));
         }
       }
       if (!mounted) return;
-      final result = await accountModule.requestCode(
+      final result = await _account.requestCode(
         phone,
         language: Localizations.localeOf(context).languageCode,
       );
@@ -415,7 +429,7 @@ class _LoginScreenState extends State<LoginScreen> {
             onPressed: _submitting
                 ? null
                 : () async {
-                    if (!await _ensureDisclaimer() || !mounted) return;
+                    if (!await _ensureDisclaimer() || !context.mounted) return;
                     await Navigator.push(
                       context,
                       MaterialPageRoute(

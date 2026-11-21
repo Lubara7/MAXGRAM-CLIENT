@@ -6,17 +6,23 @@ Specification v2 is in progress: see [implementation and acceptance status](docs
 
 **The MAX messenger. The Telegram experience.**
 
-Unofficial Android client built on [NextAlone/Nagram](https://github.com/NextAlone/Nagram), with a native MAX backend based on [Komet](https://github.com/KometTeam/Komet).
+Unofficial Android client based on [Komet](https://github.com/KometTeam/Komet), with a Telegram-style Flutter interface.
 
 [Test APK release](https://github.com/Lubara7/MAXGRAM-CLIENT/releases/tag/v0.3.0-dev.3) · [Source code](https://github.com/Lubara7/MAXGRAM-CLIENT) · [Build guide](docs/telegram-migration.md)
 
 </div>
 
-The UI base is pinned to NextAlone/Nagram under GPL v3. NagramXF remains a reference for selected privacy behavior.
+The current direction uses pinned Komet sources under GPL v3. The older Nagram/Java client remains in this repository for reference.
 
-## Android client
+## Komet preview
 
 The `komet-telegram-ui` branch contains the newer Komet-based client direction: [preparation, implemented changes and limitations](docs/komet-ui-migration.md). It preserves Komet's MAX implementation and recreates Telegram-style screens in Flutter. The published 0.3.0 APK belongs to the older Java client and does not contain these Flutter changes.
+
+Implemented changes include the Telegram-style theme and chat drawer, MAX phone login with the requested 44 countries, RU/EN, help/legal links, duplicate-submit protection, actual OTP resend and retryable message-history errors. Komet's contacts, calls, media and local-feature implementations remain available for further verification.
+
+Use Flutter 3.44.3. Initialize `upstream/komet-ui`, run `python3 scripts/prepare_komet_client.py`, then run `flutter pub get`, `flutter analyze --no-pub --no-fatal-infos lib test` and `flutter test --no-pub` inside `build/komet-client`. Set `CI=true FLUTTER_SUPPRESS_ANALYTICS=true` for these commands. The preview package is `io.github.lubara7.maxgram.preview`; no APK has been produced from this branch. Full Telegram UI parity and real-account verification remain unfinished.
+
+## Legacy native client
 
 Telegram-style navigation, chat list and message bubbles, connected to MAX. The backend can request and poll a server-issued QR challenge; authenticated QR approval in Devices remains unfinished and QR is absent from the login screen. Phone-number sign-in supports CAPTCHA, a verification code, an account password and server-selected outgoing-call verification. The login screen includes language selection, help and MAX legal documents.
 
@@ -24,7 +30,7 @@ Telegram-style navigation, chat list and message bubbles, connected to MAX. The 
 
 **Android 8.1+ · ARM64 · Experimental alpha.** Live-account compatibility is still being tested. Media uploads, stories, messenger voice/video calls and background MAX push are not implemented. Login translations are bundled; the wider Telegram interface still has English fallback strings. See [release notes](docs/release-notes.md).
 
-## Build from source
+## Build the legacy native client
 
 Requires JDK 21, Android SDK 36, Build Tools 36.0.0, NDK 27.2.12479018 and CMake 3.31.6.
 

@@ -76,6 +76,11 @@ void main() {
         ),
       );
       await tester.tap(find.text('Контакты'));
+      await tester.scrollUntilVisible(
+        find.text('Настройки'),
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
       await Scrollable.ensureVisible(
         tester.element(find.text('Настройки')),
         alignment: 0.5,
