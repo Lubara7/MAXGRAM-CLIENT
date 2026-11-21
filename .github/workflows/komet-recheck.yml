@@ -2,7 +2,7 @@ name: Recheck and publish Komet preview APK
 
 on:
   push:
-    branches: [komet-telegram-ui]
+    branches: [main, komet-telegram-ui]
     paths:
       - '.github/workflows/komet-recheck.yml'
       - 'scripts/smoke_komet_preview.py'
@@ -131,6 +131,6 @@ jobs:
                   with (Path('dist')/name).open('rb') as stream: digest=hashlib.file_digest(stream,'sha256').hexdigest()
                   target.write(digest+'  '+name+'\n')
           PY
-          gh release create "$PREVIEW_TAG" --draft --prerelease --target "$SOURCE_SHA" --title "MAXGRAM CLIENT $PREVIEW_TAG — Komet preview" --notes-file docs/komet-preview-release.md
+          gh release create "$PREVIEW_TAG" --draft --prerelease --target "$GITHUB_SHA" --title "MAXGRAM CLIENT $PREVIEW_TAG — Komet preview" --notes-file docs/komet-preview-release.md
           gh release upload "$PREVIEW_TAG" dist/*
           gh release edit "$PREVIEW_TAG" --draft=false --prerelease --latest=false

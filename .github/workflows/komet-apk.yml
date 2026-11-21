@@ -2,7 +2,7 @@ name: Build Komet preview APK
 
 on:
   push:
-    branches: [komet-telegram-ui]
+    branches: [main, komet-telegram-ui]
     paths:
       - '.github/workflows/komet-apk.yml'
       - 'integrations/komet/**'

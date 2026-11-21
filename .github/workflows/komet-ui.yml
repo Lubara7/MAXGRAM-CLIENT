@@ -2,7 +2,7 @@ name: Komet UI migration
 
 on:
   push:
-    branches: [komet-telegram-ui]
+    branches: [main, komet-telegram-ui]
     paths:
       - '.github/workflows/komet-ui.yml'
       - '.gitmodules'
