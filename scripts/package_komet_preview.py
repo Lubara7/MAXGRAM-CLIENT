@@ -74,6 +74,12 @@ def main():
         for checkout in (Path.home() / '.cargo/git/checkouts').glob('kolibri-*/*'):
             if (checkout / 'Cargo.toml').is_file():
                 archive.add(checkout, arcname=f'{label}/vendor/kolibri-core-{checkout.name}', filter=include_source)
+    screenshots = output / 'telegram-ui-screenshots.zip'
+    with zipfile.ZipFile(screenshots, 'w', zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted((client / 'test/goldens').glob('telegram-*.png')):
+            archive.write(path, path.name)
+        archive.write(client / 'MAXGRAM_UI_REFERENCE.md', 'source-comparison.md')
+        archive.write(client / 'telegram-design.lock.json', 'telegram-design.lock.json')
     preparation = json.loads((client / 'maxgram-preparation.json').read_text())
     provenance = {
         'sourceCommit': os.environ['GITHUB_SHA'],
@@ -84,6 +90,7 @@ def main():
         'flutter': lock['flutter'],
         'artifacts': artifacts,
         'sourceArchiveSha256': digest(source_archive),
+        'uiScreenshotsSha256': digest(screenshots),
         'preparation': preparation,
         'realAccountAcceptance': False,
         'observation72hComplete': False,

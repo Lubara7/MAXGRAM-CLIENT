@@ -1,3 +1,4 @@
+import 'package:komet/maxgram/telegram_icon.dart';
 import 'package:flutter/material.dart';
 
 enum MaxgramDestination {
@@ -59,7 +60,7 @@ class MaxgramToolbar extends StatelessWidget {
                     ? MaxgramLabels.menu(context)
                     : MaterialLocalizations.of(context).backButtonTooltip,
                 onPressed: onMenu,
-                icon: Icon(leading),
+                icon: TelegramIcon(leading),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -96,7 +97,7 @@ class MaxgramToolbar extends StatelessWidget {
                 IconButton(
                   tooltip: MaxgramLabels.search(context),
                   onPressed: onSearch,
-                  icon: const Icon(Icons.search),
+                  icon: const TelegramIcon(Icons.search),
                 ),
               const SizedBox(width: 8),
             ],
@@ -237,7 +238,7 @@ class MaxgramDrawer extends StatelessWidget {
   ) {
     return ListTile(
       minTileHeight: 48,
-      leading: Icon(icon, size: 24),
+      leading: TelegramIcon(icon, size: 24),
       title: Text(text, style: const TextStyle(fontSize: 16)),
       onTap: () => onSelected(value),
     );

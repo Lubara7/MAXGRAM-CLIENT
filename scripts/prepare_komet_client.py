@@ -41,6 +41,18 @@ def prepare(source, target):
     run('git', 'apply', patch, cwd=target)
     shutil.copytree(INTEGRATION / 'lib', target / 'lib', dirs_exist_ok=True)
     shutil.copytree(INTEGRATION / 'test', target / 'test', dirs_exist_ok=True)
+    for directory in ('assets', 'shaders'):
+        if (INTEGRATION / directory).is_dir():
+            shutil.copytree(INTEGRATION / directory, target / directory, dirs_exist_ok=True)
+    design_path = INTEGRATION / 'telegram-design.lock.json'
+    design = json.loads(design_path.read_text()) if design_path.is_file() else None
+    if design is not None:
+        shutil.copy2(design_path, target / 'telegram-design.lock.json')
+        shutil.copy2(ROOT / 'docs/telegram-android-design.md', target / 'MAXGRAM_UI_REFERENCE.md')
+        for asset in design['assets']:
+            actual = hashlib.sha256((target / asset['asset']).read_bytes()).hexdigest()
+            if actual != asset['sha256']:
+                raise RuntimeError('Telegram UI asset hash mismatch: ' + asset['asset'])
     if f"version: {lock['version']}" not in (target / 'pubspec.yaml').read_text().splitlines():
         raise RuntimeError('Prepared application version does not match the lock')
     after = fingerprints(target)
@@ -60,6 +72,8 @@ def prepare(source, target):
         'patchSha256': hashlib.sha256(Path(patch).read_bytes()).hexdigest(),
         'applicationId': lock['applicationId'],
         'status': lock['status'],
+        'telegramUiSourceCommit': design['commit'] if design is not None else None,
+        'telegramUiAssetsVerified': len(design['assets']) if design is not None else 0,
     }
     (target / 'maxgram-preparation.json').write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result, indent=2))

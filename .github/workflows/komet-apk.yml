@@ -2,7 +2,7 @@ name: Build Komet preview APK
 
 on:
   push:
-    branches: [main, komet-telegram-ui]
+    branches: [main, komet-telegram-ui, telegram-android-design]
     paths:
       - '.github/workflows/komet-apk.yml'
       - 'integrations/komet/**'
@@ -20,7 +20,7 @@ env:
   FLUTTER_SUPPRESS_ANALYTICS: 'true'
   CARGO_BUILD_JOBS: '2'
   PREVIEW_KEYSTORE: /tmp/maxgram-signing/preview.keystore
-  PREVIEW_TAG: v0.4.0-dev.3+18-komet-ui
+  PREVIEW_TAG: v0.4.0-dev.4+19-komet-ui
 
 jobs:
   build:
@@ -111,6 +111,7 @@ jobs:
             build/komet-client/maxgram-preparation.json
             build/komet-client/build/reports/
             build/komet-client/android/.gradle/**/reports/
+            build/komet-client/test/failures/
 
   smoke:
     needs: build

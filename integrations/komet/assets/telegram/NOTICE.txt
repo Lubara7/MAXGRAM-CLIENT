@@ -1,0 +1,11 @@
+Telegram for Android UI resources and control geometry
+Copyright Telegram and the respective source-file authors.
+The Switch component credits Nikolai Kudashov, 2013-2018.
+Licensed under GNU GPL version 2 or later; see TELEGRAM_LICENSE.
+Official source: https://github.com/TelegramMessenger/Telegram-Android/tree/21f7d109da6ab3506c9e9577f98c6a38771ab335
+Original resource bytes are retained. Their source paths and SHA-256 hashes
+are recorded in integrations/komet/telegram-design.lock.json.
+Ported control geometry: Switch.java, TextCell.java, TextSettingsCell.java,
+ActionBar/MessageDrawable.java, Theme.java and jni/image.cpp.
+The static gradient is phase 0 of Telegram MotionBackgroundDrawable.
+Roboto regular/bold/italic are distributed with their Apache 2.0 notice.
