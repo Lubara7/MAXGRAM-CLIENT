@@ -2,7 +2,7 @@ name: Komet UI migration
 
 on:
   push:
-    branches: [main, komet-telegram-ui]
+    branches: [main, komet-telegram-ui, telegram-android-design]
     paths:
       - '.github/workflows/komet-ui.yml'
       - '.gitmodules'
@@ -62,3 +62,11 @@ jobs:
         with:
           name: komet-ui-preparation
           path: build/komet-client/maxgram-preparation.json
+      - name: Upload Telegram UI comparison images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-design-screenshots
+          path: |
+            build/komet-client/test/goldens/telegram-*.png
+            build/komet-client/test/failures/

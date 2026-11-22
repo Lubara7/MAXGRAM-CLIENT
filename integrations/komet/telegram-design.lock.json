@@ -1,0 +1,477 @@
+{
+  "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+  "commit": "21f7d109da6ab3506c9e9577f98c6a38771ab335",
+  "density": "xxhdpi",
+  "assets": [
+    {
+      "asset": "assets/telegram/icons/ic_ab_back.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/ic_ab_back.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "a1a41777fb63cefd07aa7480687c55cfcf1ea0d2a8dda35c312e466e1a1195ea"
+    },
+    {
+      "asset": "assets/telegram/icons/ic_ab_other.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/ic_ab_other.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "0ec992659736897f869e2fa5baad353cb1c4d0f4b0f35ef3cf94de3c067cb499"
+    },
+    {
+      "asset": "assets/telegram/icons/input_attach.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/input_attach.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "1aaf75a8c0dc1e9247e572d26790a73fabbbaed29b0e79badec278741727e896"
+    },
+    {
+      "asset": "assets/telegram/icons/input_mic.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/input_mic.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "e8a7aa59928763d054a4067adc99975123fb915c8eca1bc69700132c97594562"
+    },
+    {
+      "asset": "assets/telegram/icons/input_smile.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/input_smile.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "075531cfca55fac7be94a853f3934332c935273a733eea8aa99775da5aadd783"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_animations.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_animations.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "a2e4fa5c3be6aadd6e39c75792b0f560188159b992bdf1d8377d9bc499ce78a5"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_archived_stickers.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_archived_stickers.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "3c4dee55dff31c2f7838f7c6777222fd8e078c31d2812bec1dd6211278b9851d"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_ask_question.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_ask_question.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "1c00edad4247a24af988a3cb90056b5a53e3ef468e0092eb4b4c5bb7793bab4f"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_autodelete.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_autodelete.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "febcf63c28dce8d74e4efc0e13e715ae923c79acca41887229941d15bd0437e5"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_battery.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_battery.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "52d134af902629b0c833f5740c95fc74544af9ce681e90f76677c78828a736e6"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_block2.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_block2.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "c5fd6487474233ecc12df96bcfae610d1aa4041e946e376a32152aa0f04e8a03"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_call_earpiece.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_call_earpiece.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "0af603cd26e7082b125dbebd39b058d7237e39992acf3c69e6bb518de1591b30"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_chats_add.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_chats_add.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "c68a7381432521a25f0031e8f91475b1b16a9f91486f41bd20d0aae8f2781fc9"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_data.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_data.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "ab8f6af3cf4fe86792e5da3ffb26efce53f912999bb0fced86b7caf04755f2a8"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_devices.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_devices.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "c1fa462502073f619a4015fccbfcd3f38ef95b7e905e9bd314256c8f4f5bf1f5"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_discussion.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_discussion.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "85c4ce556b0b70377f918c7c3b076df6433419822075b7b1574d175ea7ecb18b"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_email.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_email.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "0803aedbfb09ae3b878cc899083aacb349c87b90f682d63c837794adbde89020"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_folder.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_folder.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "8dbac6396b436beab7af36bb58f624617df0d0cbd9bda3b3132d90008edf1445"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_gif.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_gif.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "f7e97442a6fc945810cc32a055a8496a59171afe958bbe5c8bbc0b1c17566cf1"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_help.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_help.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "59b252553ec4ee5c1b0a37d15b9484558732c5f025896a7435cd190bf0d990df"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_language.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_language.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "04109c4497873796aa3eef87b56d4248795c48c62b5be9da55b4f1d3db9b7a41"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_link2.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_link2.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "d9111071e1639df4f4192e1d80053b35ecf052320d1786f1aa5558d03f64ed31"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_notifications.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_notifications.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "14a7cd1f4da338ace40bf8a8936243e3ca9d30ed2ad9b9259cb9beb399c20f35"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_permissions.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_permissions.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "97836f9202b86f40f99cf0dab729a4290114e32c7097131684c33a3f4c6e19b5"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_policy.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_policy.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "c91df740ac9822c2ac8a749916f4f60a1cf8694be9732633623b6ae8e494025a"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_reactions2.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_reactions2.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "b7c1770177f791d82d5aa689c2469f65d09a046da7d0e00cd0a189c17ac9a986"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_secret.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_secret.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "05985117d6e5177dcdf5d1c17abe55977f850cc0ae175d9d2da1e6d8f7905903"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_smile_status.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_smile_status.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "689acf01c0b963e44da205b07e7b4d43e3a6341fccf0077f45b0d6b81124d08c"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_sticker.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_sticker.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "f0f6ce5039adb937eb8452c94201bb7d5e34f06f892e12ba8b01ce99679a512e"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_trending.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_trending.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "8164c04d6d73df6dbdcfcc0523c21f6299db8c8f549aab64f1e0ee5be8b6253c"
+    },
+    {
+      "asset": "assets/telegram/icons/msg2_videocall.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg2_videocall.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "502f8eba732590c7cac4cb2cfdc18879d885c380fb46e6d140b70ce082d53c55"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_add.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_add.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "11fca749f2b1798686325cb28a47808d63d235707335120192dbb511e885f042"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_background.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_background.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "c96157f37fb5ff7268dcc5468171ee36578ef27a6ca48178e591f31a6ba62881"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_block.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_block.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "3ae026394e1eb82b48222e9d3eaa14873a348f9e59a49cc1e13cc760300a1886"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_calls.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_calls.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "b655d03e9af28614cde3b7a1f334e549e17df557c539e774970f4622dce6a03a"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_camera.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_camera.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "92cacb2eeb6c1c4190e8f7c664678b6cf1eed62e69934ff88491580dbc3c3f8d"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_check_s.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_check_s.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "53e6f7f8835e316ec652b674020c9ceac0ad6ca32c194e3d93d28dc3cba2aa4f"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_contacts.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_contacts.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "ab75bc7b7e640e306b1400f905110e9dce77e68b54660c740a8df86b19251cb5"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_delete.png",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_delete.png",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "deb1041dd8bbee0ad63b39b80f1a5a031ecd2ee3207192493d9f66792f8e3e55"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_download.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_download.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "933815df791278b01ce382b863bddba612dfacb9ac7c721b91a6cf10d86ab73a"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_edit.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_edit.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "578a46c3af456c027491e8069a1ef97e0ec4027ccfcf72157c4593617e86ef53"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_groups_create.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_groups_create.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "1cf777c911b3820266e3578f5405e0f9e3aea02e206d3171e1daf192ae7d7739"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_help.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_help.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "8605fd9a98cdf4c08a664d8e5ee00dced35845efef46261ef8968c1e0d92d21c"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_mute.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_mute.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "a70b0843b64565fb2d058ee20d32c316fdbc6cd0d47e5dd31eb6c12184a34aa2"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_photos.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_photos.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "f3dff42f17a9503dbf6b7315e01bb1d42fc36ecf151b146723c62743a366fa1b"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_saved.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_saved.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "457066fd5447cd0389503b422a1eecee520cd17cbfd5b2c111d4a8c5f9b763c0"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_search.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_search.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "478962bae4ca0c8d48ba0a8b3eebe5900d063f3a47380bdb9448fc0d43317ca6"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_send.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_send.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "2b6366c5fab9ddb398e3a623a6cb4cf5b690a849ff96ede8b90212cc24e899eb"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_settings.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_settings.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "529c7688d9fba136d955208bdc57afc0ad36bed1619055a210f09c141ec738cb"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_theme.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_theme.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "58aa716a9b8cd6e487fcc86d9faefb1ee3271d0d405743161da102a11c7ee31c"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_unmute.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_unmute.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "0b3d63e2df4c14a0b5626a05019805371b92ba4d3e7487e055831082e7dcd545"
+    },
+    {
+      "asset": "assets/telegram/icons/msg_voice_unmuted.webp",
+      "source": "TMessagesProj/src/main/res/drawable-xxhdpi/msg_voice_unmuted.webp",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "2c20f3c9fe7afbcf8f62c1fd22c9f071b13e04686e94bf76e5da4a98fa689d23"
+    },
+    {
+      "asset": "assets/telegram/default_pattern.svg",
+      "source": "TMessagesProj/src/main/res/raw/default_pattern.svg",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "30e6db943765f576843a349e00d4d2db8074666d4a475675e5b916e84033007c"
+    },
+    {
+      "asset": "assets/telegram/fonts/Roboto-Medium.ttf",
+      "source": "TMessagesProj/src/main/assets/fonts/rmedium.ttf",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "c4a17ec40f13be4a229e34893e3e04f19dd190f48b4908e0649402cb2229e9cb"
+    },
+    {
+      "asset": "assets/telegram/fonts/Roboto-Regular.ttf",
+      "source": "Roboto-Regular.ttf",
+      "repository": "https://github.com/flutter/flutter/tree/3.44.3",
+      "sha256": "79e851404657dac2106b3d22ad256d47824a9a5765458edb72c9102a45816d95"
+    },
+    {
+      "asset": "assets/telegram/fonts/Roboto-Bold.ttf",
+      "source": "Roboto-Bold.ttf",
+      "repository": "https://github.com/flutter/flutter/tree/3.44.3",
+      "sha256": "7d0b991ee3e0be7af01ad7ea8cd2beea6c00a25e679a0226b6737f079aafff86"
+    },
+    {
+      "asset": "assets/telegram/fonts/Roboto-Italic.ttf",
+      "source": "Roboto-Italic.ttf",
+      "repository": "https://github.com/flutter/flutter/tree/3.44.3",
+      "sha256": "5fce8b6f8ba9f4d19f0d535e241d56a2b8e72bb07e7df711d968d092ef7f9fca"
+    },
+    {
+      "asset": "assets/telegram/fonts/Roboto_LICENSE.txt",
+      "source": "Roboto_LICENSE.txt",
+      "repository": "https://github.com/flutter/flutter/tree/3.44.3",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "asset": "assets/telegram/TELEGRAM_LICENSE",
+      "source": "LICENSE",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+    },
+    {
+      "asset": "assets/telegram/themes/day.attheme",
+      "source": "TMessagesProj/src/main/assets/day.attheme",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "889713b6dfdc03494ed9cf27277fea904bc93193972f1b569a7907331898bcfc"
+    },
+    {
+      "asset": "assets/telegram/themes/night.attheme",
+      "source": "TMessagesProj/src/main/assets/night.attheme",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "426b59a6dc079facbe3be2675139681ed1db43cd7c5038cd657bed7b0a67e83a"
+    },
+    {
+      "asset": "assets/telegram/themes/darkblue.attheme",
+      "source": "TMessagesProj/src/main/assets/darkblue.attheme",
+      "repository": "https://github.com/TelegramMessenger/Telegram-Android",
+      "sha256": "81be74947c282291b383a21ababc5b976ad33f49910c8c8d400c8b9ea448d5f0"
+    }
+  ],
+  "palettes": {
+    "classic": {
+      "windowBackgroundWhite": 4294967295,
+      "windowBackgroundWhiteGrayIcon": 4279901473,
+      "windowBackgroundWhiteBlueText": 4282421965,
+      "windowBackgroundWhiteGrayText2": 4286744202,
+      "windowBackgroundWhiteBlackText": 4279901473,
+      "windowBackgroundWhiteValueText": 4280912591,
+      "windowBackgroundWhiteBlueHeader": 4280912591,
+      "switchTrack": 4289113523,
+      "switchTrackChecked": 4280457968,
+      "windowBackgroundGray": 4294046195,
+      "divider": 4292467161,
+      "actionBarDefault": 4294967295,
+      "actionBarDefaultIcon": 4279901473,
+      "actionBarDefaultTitle": 4279901473,
+      "actionBarDefaultSubtitle": 4286153086,
+      "chat_inBubble": 4294967295,
+      "chat_outBubble": 4293918686,
+      "chat_messageTextIn": 4278190080,
+      "chat_messageTextOut": 4278190080,
+      "chat_messagePanelBackground": 4294967295,
+      "chat_messagePanelIcons": 4287534491,
+      "chat_wallpaper": 4292599227
+    },
+    "day": {
+      "windowBackgroundWhite": 4294967295,
+      "windowBackgroundWhiteGrayIcon": 4279901473,
+      "windowBackgroundWhiteBlueText": 4280519395,
+      "windowBackgroundWhiteGrayText2": 4286744202,
+      "windowBackgroundWhiteBlackText": 4281545523,
+      "windowBackgroundWhiteValueText": 4280912591,
+      "windowBackgroundWhiteBlueHeader": 4280912591,
+      "switchTrack": 4289113523,
+      "switchTrackChecked": 4280457968,
+      "windowBackgroundGray": 4294046195,
+      "divider": 4293322470,
+      "actionBarDefault": 4294967295,
+      "actionBarDefaultIcon": 4282404438,
+      "actionBarDefaultTitle": 4281545523,
+      "actionBarDefaultSubtitle": 4286153086,
+      "chat_inBubble": 4293980400,
+      "chat_outBubble": 4281171669,
+      "chat_messageTextIn": 4278190080,
+      "chat_messageTextOut": 4294967295,
+      "chat_messagePanelBackground": 4294967295,
+      "chat_messagePanelIcons": 4287534491,
+      "chat_wallpaper": 4294967295
+    },
+    "night": {
+      "windowBackgroundWhite": 4279769113,
+      "windowBackgroundWhiteGrayIcon": 4286414205,
+      "windowBackgroundWhiteBlueText": 4284790255,
+      "windowBackgroundWhiteGrayText2": 1862139391,
+      "windowBackgroundWhiteBlackText": 4294967295,
+      "windowBackgroundWhiteValueText": 3765024509,
+      "windowBackgroundWhiteBlueHeader": 4285314808,
+      "switchTrack": 4284506208,
+      "switchTrackChecked": 4282752227,
+      "windowBackgroundGray": 4278190080,
+      "divider": 4278190080,
+      "actionBarDefault": 4280492838,
+      "actionBarDefaultIcon": 4294967295,
+      "actionBarDefaultTitle": 4294967295,
+      "actionBarDefaultSubtitle": 1945301746,
+      "chat_inBubble": 4280230179,
+      "chat_outBubble": 4281756847,
+      "chat_messageTextIn": 4294638330,
+      "chat_messageTextOut": 4294638330,
+      "chat_messagePanelBackground": 4280163871,
+      "chat_messagePanelIcons": 1694498815,
+      "chat_wallpaper": 4279176976
+    },
+    "tinted": {
+      "windowBackgroundWhite": 4280100659,
+      "windowBackgroundWhiteGrayIcon": 4286417817,
+      "windowBackgroundWhiteBlueText": 4284790255,
+      "windowBackgroundWhiteGrayText2": 1878130175,
+      "windowBackgroundWhiteBlackText": 4294967295,
+      "windowBackgroundWhiteValueText": 3766076668,
+      "windowBackgroundWhiteBlueHeader": 4286170364,
+      "switchTrack": 4284314756,
+      "switchTrackChecked": 4284589015,
+      "windowBackgroundGray": 4279574055,
+      "divider": 2499805184,
+      "actionBarDefault": 4280560953,
+      "actionBarDefaultIcon": 4294967295,
+      "actionBarDefaultTitle": 4294967295,
+      "actionBarDefaultSubtitle": 2111566591,
+      "chat_inBubble": 4280495675,
+      "chat_outBubble": 4282278282,
+      "chat_messageTextIn": 4294638330,
+      "chat_messageTextOut": 4294638330,
+      "chat_messagePanelBackground": 4280364347,
+      "chat_messagePanelIcons": 1860235519,
+      "chat_wallpaper": 4279574055
+    }
+  }
+}
