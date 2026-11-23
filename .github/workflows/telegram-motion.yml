@@ -1,0 +1,46 @@
+name: Telegram motion preparation
+on:
+  push:
+    branches: [telegram-motion-emojis]
+    paths: ['.github/workflows/telegram-motion.yml']
+permissions:
+  contents: read
+env:
+  CI: 'true'
+  FLUTTER_SUPPRESS_ANALYTICS: 'true'
+jobs:
+  dependencies:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          cache: true
+      - name: Export public SDK package sources
+        run: |
+          python3 - <<'PY'
+          import os,json,tarfile
+          from pathlib import Path
+          from urllib.parse import urlparse
+          cache=Path.home()/'.pub-cache'
+          config=Path(os.environ['FLUTTER_ROOT'])/'packages/flutter_tools/.dart_tool/package_config.json'
+          packages=json.loads(config.read_text())['packages']
+          with tarfile.open('flutter-public-sdk-packages.tar.gz','w:gz') as archive:
+              count=0
+              for package in packages:
+                  path=Path(urlparse(package['rootUri']).path)
+                  if path.is_dir() and path.is_relative_to(cache/'hosted/pub.dev'):
+                      archive.add(path,arcname=str(path.relative_to(cache)))
+                      count+=1
+          print('Public packages:',count)
+          PY
+      - uses: actions/upload-artifact@v6
+        with:
+          name: flutter-public-sdk-packages
+          path: flutter-public-sdk-packages.tar.gz
+          retention-days: 3
